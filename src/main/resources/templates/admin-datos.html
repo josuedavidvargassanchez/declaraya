@@ -101,10 +101,15 @@
                 </tbody>
             </table>
         </div>
-
-        <div th:if="${powerBiUrl != null and !powerBiUrl.isBlank()}">
-            <h3>Informe de Power BI</h3>
-            <iframe class="powerbi-frame" th:src="${powerBiUrl}" title="Informe de Power BI" allowfullscreen></iframe>
+        <div style="margin-top: 30px;">
+            <h3>Informe de Power BI - DeclaraYa</h3>
+            <p class="hint">Dashboard interactivo conectado al sistema institucional.</p>
+            <div style="position: relative; width: 100%; height: 560px; overflow: hidden; border-radius: 8px; border: 1px solid #ddd;">
+                <iframe title="Pa.final" width="100%" height="100%" 
+                    src="https://app.powerbi.com/reportEmbed?reportId=2a9aab5f-f259-4138-89b5-0ff4d7d6ca04&autoAuth=true&ctid=32a6d75d-5050-4138-89b5-0ff4d7d6ca04" 
+                    frameborder="0" allowFullScreen="true" style="position: absolute; top: 0; left: 0;">
+                </iframe>
+            </div>
         </div>
     </main>
 </div>
