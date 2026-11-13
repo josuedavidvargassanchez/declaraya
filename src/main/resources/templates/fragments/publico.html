@@ -1,0 +1,22 @@
+<th:block xmlns:th="http://www.thymeleaf.org">
+<header class="pub-nav" th:fragment="publicnav(logueado)">
+    <a class="brand" th:href="@{/}"><span class="brand-mark">D</span>DeclaraYa</a>
+    <nav>
+        <a th:href="@{/ayuda}">Preguntas frecuentes</a>
+        <a th:if="${logueado}" th:href="@{/inicio}" class="btn btn-small">Ir a mi panel</a>
+        <th:block th:unless="${logueado}">
+            <a th:href="@{/login}">Iniciar sesión</a>
+            <a th:href="@{/registro}" class="btn btn-small">Crear cuenta</a>
+        </th:block>
+    </nav>
+</header>
+<footer class="pub-footer" th:fragment="footer">
+    <span class="brand"><span class="brand-mark">D</span>DeclaraYa</span>
+    <p>Plataforma que conecta personas con contadores públicos y practicantes para sus trámites tributarios.</p>
+    <p class="pub-footer-links">
+        <a th:href="@{/ayuda}">Preguntas frecuentes</a> ·
+        <a th:href="@{/politica-datos}">Política de datos</a> ·
+        <a th:href="@{/login}">Ingresar</a>
+    </p>
+</footer>
+</th:block>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>DeclaraYa - Chat</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+<div class="layout">
+    <main class="content content-narrow">
+        <h2 th:text="${'Chat del acuerdo #' + acuerdo.id}">Chat</h2>
+        <p th:text="${acuerdo.oferta.solicitud.titulo}">Caso</p>
+        <div class="row-actions">
+            <span class="tag" th:text="${acuerdo.estado}">Estado</span>
+            <span class="tag" th:text="${'Comision plataforma: $ ' + acuerdo.comisionPlataforma}">Comisión</span>
+            <a th:href="@{'/acuerdos/' + ${acuerdo.id} + '/documento'}" class="btn btn-small btn-muted">Ver documento del acuerdo</a>
+        </div>
+
+        <div class="banner-warning" th:if="${bloqueadoPorMentor}">
+            A la espera de la aprobacion del mentor para iniciar el trabajo.
+        </div>
+        <div class="banner-warning" th:if="${disputaAbierta}">
+            Hay una disputa abierta en este acuerdo.
+        </div>
+        <div class="banner-warning" th:if="${acuerdo.estado.name() == 'FINALIZADO'}">
+            Acuerdo finalizado: el chat esta en solo lectura.
+        </div>
+        <p class="error" th:if="${param.errorChat}">No se pudo enviar el mensaje.</p>
+        <p class="error" th:if="${param.errorArchivo}">Archivo no valido. Solo PDF, JPG o PNG de maximo 10 MB.</p>
+
+        <div class="chat-box">
+            <div class="chat-message" th:each="m : ${mensajes}">
+                <strong th:text="${m.remitente.nombre}">Remitente</strong>
+                <p th:text="${m.contenido}">Contenido</p>
+                <div th:each="a : ${archivosPorMensaje[m.id]}">
+                    <a th:href="@{'/archivos/' + ${a.id}}" th:text="${a.nombreArchivo}">archivo.pdf</a>
+                </div>
+            </div>
+            <p th:if="${mensajes.isEmpty()}" class="empty">Aun no hay mensajes en este chat.</p>
+        </div>
+
+        <form th:if="${chatHabilitado}" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/chat/mensajes'}"
+              method="post" enctype="multipart/form-data" class="chat-form">
+            <input type="text" name="contenido" placeholder="Escribe un mensaje...">
+            <input type="file" name="archivo" accept=".pdf,.jpg,.jpeg,.png">
+            <button type="submit">Enviar</button>
+        </form>
+
+        <div class="row-actions" th:if="${esPersona and chatHabilitado}">
+            <form th:action="@{'/acuerdos/' + ${acuerdo.id} + '/finalizar'}" method="post"
+                  data-confirm="¿Confirmas que ya recibiste todo y deseas finalizar el acuerdo?">
+                <button type="submit" class="btn-small">Finalizar acuerdo</button>
+            </form>
+        </div>
+
+        <form th:if="${esParticipante and not disputaAbierta}" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/disputa'}"
+              method="post" class="inline-form" data-confirm="¿Abrir una disputa? El administrador podra ver este chat.">
+            <input type="text" name="motivo" placeholder="Motivo de la disputa" maxlength="500" required>
+            <button type="submit" class="btn-small btn-muted">Abrir disputa</button>
+        </form>
+
+        <p class="link-secondary"><a th:href="@{/inicio}">Volver</a></p>
+    </main>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

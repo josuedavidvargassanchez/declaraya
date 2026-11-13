@@ -1,0 +1,176 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Contador</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('inicio')}"></aside>
+
+      <main class="content">
+        <div class="stat-cards">
+          <div class="stat-card"><div class="stat-ico c-blue"><span th:replace="~{fragments/icons :: i('briefcase')}"></span></div><div><p class="stat-num" th:text="${#lists.size(solicitudesDisponibles)}">0</p><p class="stat-lbl">Solicitudes disponibles</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-amber"><span th:replace="~{fragments/icons :: i('clock')}"></span></div><div><p class="stat-num" th:text="${ofertasPendientes}">0</p><p class="stat-lbl">Ofertas pendientes</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-green"><span th:replace="~{fragments/icons :: i('check')}"></span></div><div><p class="stat-num" th:text="${ofertasAceptadas}">0</p><p class="stat-lbl">Ofertas aceptadas</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-violet"><span th:replace="~{fragments/icons :: i('file')}"></span></div><div><p class="stat-num" th:text="${ofertasTotal}">0</p><p class="stat-lbl">Ofertas enviadas</p></div></div>
+        </div>
+
+        <div class="banner-warning" th:unless="${usuario.verificado}">
+          Tu cuenta aun no ha sido verificada por el administrador. Podras
+          enviar ofertas cuando se valide tu tarjeta profesional.
+        </div>
+        <p class="success" th:if="${param.ofertaEnviada}">
+          Oferta enviada correctamente.
+        </p>
+        <p class="success" th:if="${param.ofertaEditada}">Oferta actualizada correctamente.</p>
+        <p class="success" th:if="${param.ofertaRetirada}">Oferta retirada.</p>
+        <p class="error" th:if="${param.errorVerificacion}">
+          Tu cuenta debe estar verificada para ofertar.
+        </p>
+        <p class="error" th:if="${param.errorSolicitud}">
+          Esa solicitud ya no esta abierta.
+        </p>
+        <p class="error" th:if="${param.errorValor}">
+          El valor propuesto debe ser mayor que cero.
+        </p>
+        <p class="error" th:if="${param.errorDuplicada}">
+          Ya enviaste una oferta para esa solicitud.
+        </p>
+
+        <h2>Solicitudes disponibles</h2>
+        <div class="card-grid">
+          <div class="card" th:each="s : ${solicitudesDisponibles}">
+            <div class="card-persona">
+              <span
+                th:replace="~{fragments/avatar :: avatar(${s.persona})}"
+              ></span>
+              <div>
+                <p class="card-title" th:text="${s.titulo}">Titulo</p>
+                <p class="card-subtitle" th:text="${s.persona.nombre}">
+                  Persona
+                </p>
+              </div>
+            </div>
+            <div class="meta-row">
+              <span class="chip" th:if="${s.anioGravable != null}" th:text="${'Año ' + s.anioGravable}">Año</span>
+              <span class="chip" th:if="${s.urgencia != null}"
+                    th:classappend="${s.urgencia == 'Urgente'} ? 'chip-urgente'"
+                    th:text="${s.urgencia}">Urgencia</span>
+              <span class="chip chip-dinero" th:if="${s.presupuestoMaximo != null}"
+                    th:text="${'Presupuesto $ ' + #numbers.formatDecimal(s.presupuestoMaximo, 1, 'POINT', 0, 'COMMA')}">Presupuesto</span>
+            </div>
+            <div class="meta-row" th:if="${!s.situacionesLista.isEmpty()}">
+              <span class="chip chip-suave" th:each="sit : ${s.situacionesLista}" th:text="${sit}">Situación</span>
+            </div>
+            <p th:text="${s.descripcion}">Descripcion</p>
+
+            <form
+              th:if="${usuario.verificado}"
+              th:action="@{'/solicitudes/' + ${s.id} + '/ofertas'}"
+              method="post"
+              class="inline-form"
+            >
+              <input
+                type="text"
+                name="mensaje"
+                placeholder="Mensaje para el cliente"
+                required
+              />
+              <input
+                type="number"
+                step="0.01"
+                min="1"
+                name="valorPropuesto"
+                th:value="${usuario.tarifaBase}"
+                required
+              />
+              <button type="submit" class="btn-small">Enviar oferta</button>
+              <p class="tarifa-nota">
+                Tu tarifa base es $
+                <span
+                  th:text="${#numbers.formatDecimal(usuario.tarifaBase, 1, 'POINT', 0, 'COMMA')}"
+                  >500.000</span
+                >. Ajustala segun la complejidad de la declaracion.
+              </p>
+            </form>
+          </div>
+          <p th:if="${solicitudesDisponibles.isEmpty()}" class="empty">
+            No hay solicitudes disponibles por ahora.
+          </p>
+        </div>
+
+        <h2>Mis ofertas</h2>
+        <div class="list">
+          <div class="list-item" th:each="o : ${misOfertas}">
+            <span th:text="${o.solicitud.titulo}">Solicitud</span>
+            <span th:text="${'$ ' + o.valorPropuesto}">Valor</span>
+            <span th:class="${'badge badge-' + #strings.toLowerCase(o.estado.name())}" th:text="${#strings.capitalize(#strings.toLowerCase(o.estado.name()))}">Estado</span>
+            <span class="inline-actions" th:if="${o.estado.name() == 'PENDIENTE' and o.solicitud.estado.name() == 'ABIERTA'}">
+              <a th:href="@{'/ofertas/' + ${o.id} + '/editar'}" class="btn btn-small btn-muted">Editar</a>
+              <form th:action="@{'/ofertas/' + ${o.id} + '/retirar'}" method="post" class="form-inline" data-confirm="¿Retirar esta oferta?">
+                <button type="submit" class="btn-small btn-muted">Retirar</button>
+              </form>
+            </span>
+            <a
+              th:if="${o.estado.name() == 'ACEPTADA'}"
+              th:href="@{'/ofertas/' + ${o.id} + '/chat'}"
+              class="btn btn-small"
+              >Ir al chat</a
+            >
+          </div>
+          <p th:if="${misOfertas.isEmpty()}" class="empty">
+            Aun no has enviado ofertas.
+          </p>
+        </div>
+
+        <h2>Mis practicantes</h2>
+        <div class="list">
+          <div class="list-item" th:each="p : ${practicantes}">
+            <span th:text="${p.nombre}">Practicante</span>
+            <span
+              class="tag"
+              th:text="${p.verificado} ? 'Verificado' : 'Sin verificar'"
+              >Estado</span
+            >
+          </div>
+          <p th:if="${practicantes.isEmpty()}" class="empty">
+            Ningun practicante te ha elegido como mentor.
+          </p>
+        </div>
+
+        <h2>Casos de practicantes</h2>
+        <div class="list">
+          <div class="list-item" th:each="sup : ${practicantesSupervisados}">
+            <span th:text="${sup.practicante.nombre}">Practicante</span>
+            <span th:text="${sup.acuerdo.oferta.solicitud.titulo}">Caso</span>
+            <span class="tag" th:text="${sup.estado}">Estado</span>
+            <a
+              th:href="@{'/acuerdos/' + ${sup.acuerdo.id} + '/chat'}"
+              class="btn btn-small btn-muted"
+              >Ver chat</a
+            >
+            <form
+              th:if="${sup.estado.name() == 'PENDIENTE_APROBACION'}"
+              th:action="@{'/contador/supervisiones/' + ${sup.id} + '/aprobar'}"
+              method="post"
+              data-confirm="¿Aprobar este caso?"
+            >
+              <button type="submit" class="btn-small">Aprobar</button>
+            </form>
+          </div>
+          <p th:if="${practicantesSupervisados.isEmpty()}" class="empty">
+            No hay casos de practicantes por revisar.
+          </p>
+        </div>
+      </main>
+    </div>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

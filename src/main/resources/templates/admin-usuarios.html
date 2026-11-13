@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Usuarios</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+<div class="layout">
+    <aside th:replace="~{fragments/sidebar :: sidebar('usuarios')}"></aside>
+    <main class="content">
+        <div class="content-header">
+            <div>
+                <h2>Usuarios</h2>
+                <p class="page-lead">Crea, edita, verifica o elimina contadores, practicantes y clientes.</p>
+            </div>
+            <a th:href="@{/admin/exportar/usuarios}" class="btn btn-small btn-muted">Exportar CSV</a>
+        </div>
+
+        <p class="success" th:if="${param.creado}">Usuario creado correctamente.</p>
+        <p class="success" th:if="${param.actualizado}">Usuario actualizado.</p>
+        <p class="success" th:if="${param.eliminado}">Usuario eliminado.</p>
+        <p class="success" th:if="${param.verificado}">Contador verificado.</p>
+        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+
+        <details class="panel-plegable" open>
+            <summary><span th:replace="~{fragments/icons :: i('plus')}"></span> Agregar usuario</summary>
+            <form th:action="@{/admin/usuarios}" method="post" class="auth-form form-pro">
+                <div class="form-row">
+                    <div><label for="nombre">Nombre completo</label><input type="text" id="nombre" name="nombre" required></div>
+                    <div><label for="email">Correo</label><input type="email" id="email" name="email" required></div>
+                </div>
+                <div class="form-row">
+                    <div><label for="password">Contraseña (mín. 6)</label><input type="text" id="password" name="password" minlength="6" required></div>
+                    <div><label for="rol">Rol</label>
+                        <select id="rol" name="rol" required>
+                            <option th:each="r : ${roles}" th:value="${r.name()}" th:text="${r.etiqueta}"></option>
+                        </select></div>
+                </div>
+                <div class="form-row">
+                    <div><label for="tarjetaProfesional">Tarjeta profesional (solo contadores)</label><input type="text" id="tarjetaProfesional" name="tarjetaProfesional"></div>
+                    <div><label for="tarifaBase">Tarifa base (COP)</label><input type="number" id="tarifaBase" name="tarifaBase" min="0" step="1000" placeholder="500000"></div>
+                </div>
+                <div class="form-row">
+                    <div><label for="mentorId">Mentor (solo practicantes)</label>
+                        <select id="mentorId" name="mentorId">
+                            <option value="">Sin mentor</option>
+                            <option th:each="m : ${mentores}" th:value="${m.id}" th:text="${m.nombre}"></option>
+                        </select></div>
+                    <label class="check-item check-solo"><input type="checkbox" name="verificado" value="true" checked> <span>Contador verificado (puede ofertar)</span></label>
+                </div>
+                <button type="submit">Crear usuario</button>
+            </form>
+        </details>
+
+        <div class="tabla-wrap">
+            <table class="tabla">
+                <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Tarjeta</th><th>Estado</th><th>Mentor</th><th>Acciones</th></tr></thead>
+                <tbody>
+                <tr th:each="u : ${usuarios}">
+                    <td th:text="${u.nombre}">Nombre</td>
+                    <td th:text="${u.email}">correo</td>
+                    <td><span class="chip" th:text="${u.rol.etiqueta}">Rol</span></td>
+                    <td th:text="${u.tarjetaProfesional != null ? u.tarjetaProfesional : '—'}">TP</td>
+                    <td>
+                        <span th:if="${u.rol.name() == 'CONTADOR_PUBLICO' or u.rol.name() == 'CONTADOR_PRACTICANTE'}"
+                              th:class="${u.verificado ? 'badge badge-aceptada' : 'badge badge-pendiente'}"
+                              th:text="${u.verificado ? 'Verificado' : 'Pendiente'}">Estado</span>
+                        <span th:unless="${u.rol.name() == 'CONTADOR_PUBLICO' or u.rol.name() == 'CONTADOR_PRACTICANTE'}">—</span>
+                    </td>
+                    <td th:text="${u.mentor != null ? u.mentor.nombre : '—'}">Mentor</td>
+                    <td class="acciones">
+                        <a th:href="@{'/admin/usuarios/' + ${u.id} + '/editar'}" class="btn btn-small btn-muted">Editar</a>
+                        <form th:if="${!u.verificado and (u.rol.name() == 'CONTADOR_PUBLICO' or u.rol.name() == 'CONTADOR_PRACTICANTE')}"
+                              th:action="@{'/admin/usuarios/' + ${u.id} + '/verificar'}" method="post" class="form-inline">
+                            <input type="hidden" name="volver" value="usuarios">
+                            <button type="submit" class="btn-small">Verificar</button>
+                        </form>
+                        <form th:action="@{'/admin/usuarios/' + ${u.id} + '/eliminar'}" method="post" class="form-inline"
+                              data-confirm="¿Eliminar este usuario?">
+                            <button type="submit" class="btn-small btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

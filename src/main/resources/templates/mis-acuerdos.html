@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Mis acuerdos</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+<div class="layout">
+    <aside th:replace="~{fragments/sidebar :: sidebar('acuerdos')}"></aside>
+
+    <main class="content">
+        <div class="content-header">
+            <div>
+                <h2>Mis acuerdos</h2>
+                <p class="page-lead">Historial de los trabajos que has contratado o realizado.</p>
+            </div>
+        </div>
+
+        <div class="card-grid">
+            <div class="card card-solicitud" th:each="a : ${acuerdos}">
+                <div class="card-top">
+                    <p class="card-title" th:text="${a.oferta.solicitud.titulo}">Trámite</p>
+                    <span th:class="${'badge badge-' + #strings.toLowerCase(a.estado.name())}"
+                          th:text="${#strings.capitalize(#strings.toLowerCase(a.estado.name()))}">Estado</span>
+                </div>
+                <p class="card-subtitle" th:if="${esPersona}" th:text="${'Contador: ' + a.oferta.contador.nombre}">Contador</p>
+                <p class="card-subtitle" th:unless="${esPersona}" th:text="${'Cliente: ' + a.oferta.solicitud.persona.nombre}">Cliente</p>
+                <div class="meta-row">
+                    <span class="chip chip-dinero" th:text="${'$ ' + #numbers.formatDecimal(a.oferta.valorPropuesto, 1, 'POINT', 0, 'COMMA')}">Valor</span>
+                    <span class="chip" th:text="${'Acuerdo #' + a.id}">Acuerdo</span>
+                </div>
+                <div class="row-actions">
+                    <a th:href="@{'/acuerdos/' + ${a.id} + '/chat'}" class="btn btn-small">Abrir chat</a>
+                    <a th:href="@{'/acuerdos/' + ${a.id} + '/documento'}" class="btn btn-small btn-muted">Ver documento</a>
+                </div>
+            </div>
+        </div>
+        <div class="empty-state" th:if="${acuerdos.isEmpty()}">
+            <span th:replace="~{fragments/icons :: i('handshake')}"></span>
+            <h3>Aún no tienes acuerdos</h3>
+            <p th:if="${esPersona}">Cuando aceptes una oferta, tu acuerdo aparecerá aquí.</p>
+            <p th:unless="${esPersona}">Cuando un cliente acepte tu oferta, el acuerdo aparecerá aquí.</p>
+        </div>
+    </main>
+</div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

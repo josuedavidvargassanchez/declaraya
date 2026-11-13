@@ -1,0 +1,97 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('inicio')}"></aside>
+
+      <main class="content">
+        <div class="stat-cards">
+          <div class="stat-card"><div class="stat-ico c-amber"><span th:replace="~{fragments/icons :: i('shield')}"></span></div><div><p class="stat-num" th:text="${#lists.size(contadoresPendientes)}">0</p><p class="stat-lbl">Contadores por verificar</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-red"><span th:replace="~{fragments/icons :: i('alert')}"></span></div><div><p class="stat-num" th:text="${#lists.size(disputas)}">0</p><p class="stat-lbl">Disputas abiertas</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-blue"><span th:replace="~{fragments/icons :: i('handshake')}"></span></div><div><p class="stat-num" th:text="${#lists.size(acuerdos)}">0</p><p class="stat-lbl">Acuerdos</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-green"><span th:replace="~{fragments/icons :: i('dollar')}"></span></div><div><p class="stat-num" th:text="${'$ ' + totalComisiones}">0</p><p class="stat-lbl">Comisiones</p></div></div>
+        </div>
+
+        <h2>Contadores pendientes de verificación</h2>
+        <div class="list">
+          <div class="list-item" th:each="u : ${contadoresPendientes}">
+            <span th:text="${u.nombre}">Nombre</span>
+            <span class="tag" th:text="${u.rol}">Rol</span>
+            <span th:text="${u.tarjetaProfesional}">Tarjeta</span>
+            <form
+              th:action="@{'/admin/usuarios/' + ${u.id} + '/verificar'}"
+              method="post"
+              data-confirm="¿Verificar a este contador?"
+            >
+              <button type="submit" class="btn-small">Verificar</button>
+            </form>
+          </div>
+          <p th:if="${contadoresPendientes.isEmpty()}" class="empty">
+            No hay contadores pendientes.
+          </p>
+        </div>
+
+        <h2>Disputas abiertas</h2>
+        <div class="list">
+          <div class="list-item" th:each="d : ${disputas}">
+            <span th:text="${'Acuerdo #' + d.acuerdo.id}">Acuerdo</span>
+            <span th:text="${d.abiertaPor.nombre}">Quien abrio</span>
+            <span th:text="${d.motivo}">Motivo</span>
+            <a
+              th:href="@{'/acuerdos/' + ${d.acuerdo.id} + '/chat'}"
+              class="btn btn-small btn-muted"
+              >Ver chat</a
+            >
+            <form
+              th:action="@{'/admin/disputas/' + ${d.id} + '/resolver'}"
+              method="post"
+              data-confirm="¿Marcar la disputa como resuelta?"
+            >
+              <button type="submit" class="btn-small">Resolver</button>
+            </form>
+          </div>
+          <p th:if="${disputas.isEmpty()}" class="empty">
+            No hay disputas abiertas.
+          </p>
+        </div>
+
+        <h2>Acuerdos y comisiones</h2>
+        <p class="tag" th:text="${'Total de comisiones: $ ' + totalComisiones}">
+          Total
+        </p>
+        <div class="list">
+          <div class="list-item" th:each="a : ${acuerdos}">
+            <span th:text="${'#' + a.id}">Id</span>
+            <span th:text="${a.oferta.solicitud.titulo}">Caso</span>
+            <span th:text="${a.oferta.contador.nombre}">Contador</span>
+            <span th:text="${'Comision: $ ' + a.comisionPlataforma}"
+              >Comisión</span
+            >
+            <span class="tag" th:text="${a.estado}">Estado</span>
+          </div>
+          <p th:if="${acuerdos.isEmpty()}" class="empty">
+            Aun no hay acuerdos.
+          </p>
+        </div>
+
+        <h2>Todos los usuarios</h2>
+        <div class="list">
+          <div class="list-item" th:each="u : ${usuarios}">
+            <span th:text="${u.nombre}">Nombre</span>
+            <span class="tag" th:text="${u.rol}">Rol</span>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

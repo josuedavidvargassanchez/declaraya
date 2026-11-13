@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Tu declaración en manos de un contador de confianza</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="pub-body">
+
+<div th:replace="~{fragments/publico :: publicnav(false)}"></div>
+
+<section class="hero">
+    <div class="hero-text">
+        <span class="hero-kicker">Contadores verificados · Ofertas transparentes</span>
+        <h1>Declara con tranquilidad. Elige al contador que mejor te convenga.</h1>
+        <p>Publica lo que necesitas, recibe ofertas de contadores públicos y practicantes supervisados, compara precios y chatea directamente con quien elijas.</p>
+        <div class="hero-actions">
+            <a th:href="@{/registro}" class="btn btn-lg">Crear cuenta gratis <span th:replace="~{fragments/icons :: i('arrow')}"></span></a>
+            <a th:href="@{/login}" class="btn btn-lg btn-ghost">Ya tengo cuenta</a>
+        </div>
+    </div>
+    <div class="hero-card" aria-hidden="true">
+        <div class="mock-head"><span class="badge badge-abierta">Abierta</span><span class="chip">Año 2025</span></div>
+        <p class="mock-title">Declaración de renta</p>
+        <p class="mock-sub">3 ofertas recibidas</p>
+        <div class="mock-offer"><span>Contador público</span><strong>$ 380.000</strong></div>
+        <div class="mock-offer"><span>Contador público</span><strong>$ 450.000</strong></div>
+        <div class="mock-offer mock-best"><span>Practicante supervisado</span><strong>$ 250.000</strong></div>
+    </div>
+</section>
+
+<section class="seccion">
+    <h2 class="seccion-titulo">Así funciona</h2>
+    <p class="seccion-lead">Cuatro pasos, sin vueltas.</p>
+    <div class="pasos">
+        <div class="paso"><span class="paso-num">1</span><h3>Publica tu solicitud</h3><p>Elige el trámite, el año gravable, tu urgencia y cuéntanos tu situación.</p></div>
+        <div class="paso"><span class="paso-num">2</span><h3>Recibe ofertas</h3><p>Contadores verificados te envían su propuesta y su precio.</p></div>
+        <div class="paso"><span class="paso-num">3</span><h3>Elige y conversa</h3><p>Acepta la oferta que prefieras y habla con tu contador por chat.</p></div>
+        <div class="paso"><span class="paso-num">4</span><h3>Declara y cierra</h3><p>Envía tus documentos, recibe tu declaración y finaliza el acuerdo.</p></div>
+    </div>
+</section>
+
+<section class="seccion seccion-alt">
+    <h2 class="seccion-titulo">Trámites que puedes solicitar</h2>
+    <p class="seccion-lead">Desde tu declaración de renta hasta la respuesta a un requerimiento.</p>
+    <div class="tramites">
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('file')}"></span></div><h3>Declaración de renta</h3><p>Personas naturales: ingresos, patrimonio y deducciones.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('dollar')}"></span></div><h3>Declaración de IVA</h3><p>Bimestral o cuatrimestral, según tu régimen.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('chart')}"></span></div><h3>Retención en la fuente</h3><p>Declaración mensual de retenciones practicadas.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('briefcase')}"></span></div><h3>Impuesto de industria y comercio</h3><p>ICA para negocios y empresas.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('check')}"></span></div><h3>Régimen Simple de Tributación</h3><p>Inscripción, anticipos y declaración anual.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('db')}"></span></div><h3>Información exógena</h3><p>Reporte de información a la DIAN.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('user')}"></span></div><h3>Actualización del RUT</h3><p>Inscripción y cambios de responsabilidades.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('edit')}"></span></div><h3>Corrección de declaraciones</h3><p>Ajusta errores y evita sanciones.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('dollar')}"></span></div><h3>Devolución de saldo a favor</h3><p>Solicitud y soporte del trámite.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('alert')}"></span></div><h3>Respuesta a requerimientos</h3><p>Atiende a tiempo los oficios de la DIAN.</p></div>
+        <div class="tramite"><div class="tramite-ico"><span th:replace="~{fragments/icons :: i('help')}"></span></div><h3>Asesoría tributaria</h3><p>Resuelve dudas con un profesional.</p></div>
+    </div>
+</section>
+
+<section class="seccion">
+    <h2 class="seccion-titulo">¿Por qué DeclaraYa?</h2>
+    <div class="beneficios">
+        <div class="beneficio"><span th:replace="~{fragments/icons :: i('shield')}"></span><h3>Contadores verificados</h3><p>El administrador valida la tarjeta profesional antes de que un contador pueda ofertar.</p></div>
+        <div class="beneficio"><span th:replace="~{fragments/icons :: i('users')}"></span><h3>Practicantes con mentor</h3><p>Los practicantes trabajan bajo la supervisión de un contador público.</p></div>
+        <div class="beneficio"><span th:replace="~{fragments/icons :: i('chat')}"></span><h3>Chat con archivos</h3><p>Comparte tus soportes de forma ordenada dentro de cada acuerdo.</p></div>
+        <div class="beneficio"><span th:replace="~{fragments/icons :: i('file')}"></span><h3>Acuerdo documentado</h3><p>Cada trabajo queda con su documento y su historial.</p></div>
+        <div class="beneficio"><span th:replace="~{fragments/icons :: i('alert')}"></span><h3>Disputas con respaldo</h3><p>Si algo sale mal, el administrador interviene y revisa el caso.</p></div>
+        <div class="beneficio"><span th:replace="~{fragments/icons :: i('lock')}"></span><h3>Tus datos protegidos</h3><p>Tratamos tu información conforme a nuestra política de datos.</p></div>
+    </div>
+</section>
+
+<section class="cta">
+    <h2>¿Listo para tu próxima declaración?</h2>
+    <p>Crea tu cuenta y publica tu primera solicitud en menos de dos minutos.</p>
+    <a th:href="@{/registro}" class="btn btn-lg btn-light">Empezar ahora</a>
+</section>
+
+<div th:replace="~{fragments/publico :: footer}"></div>
+</body>
+</html>

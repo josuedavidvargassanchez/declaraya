@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Detalle de solicitud</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+<div class="layout">
+    <main class="content">
+        <div class="card-persona">
+            <span th:replace="~{fragments/avatar :: avatar(${solicitud.persona})}"></span>
+            <div>
+                <h2 th:text="${solicitud.titulo}">Título</h2>
+                <p class="card-subtitle">
+                    <span th:text="${solicitud.persona.nombre}">Persona</span>
+                    · publicada el <span th:text="${solicitud.fechaCorta}">01/01/2026</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="meta-row">
+            <span th:class="${'badge badge-' + #strings.toLowerCase(solicitud.estado.name())}"
+                  th:text="${#strings.capitalize(#strings.toLowerCase(#strings.replace(solicitud.estado.name(), '_', ' ')))}">Estado</span>
+            <span class="chip" th:if="${solicitud.anioGravable != null}"
+                  th:text="${'Año gravable ' + solicitud.anioGravable}">Año gravable</span>
+            <span class="chip" th:if="${solicitud.urgencia != null}"
+                  th:classappend="${solicitud.urgencia == 'Urgente'} ? 'chip-urgente'"
+                  th:text="${'Urgencia: ' + solicitud.urgencia}">Urgencia</span>
+            <span class="chip chip-dinero" th:if="${solicitud.presupuestoMaximo != null}"
+                  th:text="${'Presupuesto hasta $ ' + #numbers.formatDecimal(solicitud.presupuestoMaximo, 1, 'POINT', 0, 'COMMA')}">Presupuesto</span>
+        </div>
+
+        <div class="detalle-bloque" th:if="${!solicitud.situacionesLista.isEmpty()}">
+            <p class="detalle-etiqueta">Situación del cliente</p>
+            <div class="meta-row">
+                <span class="chip chip-suave" th:each="sit : ${solicitud.situacionesLista}" th:text="${sit}">Situación</span>
+            </div>
+        </div>
+
+        <div class="detalle-bloque" th:if="${solicitud.descripcion != null and !solicitud.descripcion.isBlank()}">
+            <p class="detalle-etiqueta">Descripción</p>
+            <p th:text="${solicitud.descripcion}">Descripción</p>
+        </div>
+
+        <div class="row-actions" th:if="${esDueno and solicitud.estado.name() == 'ABIERTA'}">
+            <a th:href="@{'/cliente/solicitudes/' + ${solicitud.id} + '/editar'}" class="btn btn-small btn-muted">Editar solicitud</a>
+            <form th:action="@{'/cliente/solicitudes/' + ${solicitud.id} + '/cancelar'}" method="post"
+                  data-confirm="¿Cancelar esta solicitud? Las ofertas pendientes serán rechazadas.">
+                <button type="submit" class="btn-small btn-danger">Cancelar solicitud</button>
+            </form>
+        </div>
+
+        <div th:if="${esDueno}">
+            <h3>Ofertas recibidas</h3>
+            <div class="list">
+                <div class="list-item" th:each="o : ${ofertas}">
+                    <span th:replace="~{fragments/avatar :: avatar(${o.contador})}"></span>
+                    <span><strong th:text="${o.contador.nombre}">Contador</strong><br>
+                        <small class="card-subtitle" th:text="${o.contador.rol}">Rol</small></span>
+                    <span class="precio" th:text="${'$ ' + #numbers.formatDecimal(o.valorPropuesto, 1, 'POINT', 0, 'COMMA')}">Valor</span>
+                    <span th:class="${'badge badge-' + #strings.toLowerCase(o.estado.name())}"
+                          th:text="${#strings.capitalize(#strings.toLowerCase(#strings.replace(o.estado.name(), '_', ' ')))}">Estado</span>
+                    <span class="oferta-mensaje" th:text="${o.mensaje}">Mensaje</span>
+
+                    <span th:if="${o.estado.name() == 'PENDIENTE' and solicitud.estado.name() == 'ABIERTA'}">
+                        <form th:action="@{'/ofertas/' + ${o.id} + '/aceptar'}" method="post" class="form-inline" data-confirm="¿Aceptar esta oferta?">
+                            <button type="submit" class="btn-small">Aceptar</button>
+                        </form>
+                        <form th:action="@{'/ofertas/' + ${o.id} + '/rechazar'}" method="post" class="form-inline" data-confirm="¿Rechazar esta oferta?">
+                            <button type="submit" class="btn-small btn-muted">Rechazar</button>
+                        </form>
+                    </span>
+
+                    <a th:if="${o.estado.name() == 'ACEPTADA'}" th:href="@{'/ofertas/' + ${o.id} + '/chat'}" class="btn btn-small">Ir al chat</a>
+                </div>
+                <p th:if="${ofertas.isEmpty()}" class="empty">Aún no has recibido ofertas.</p>
+            </div>
+        </div>
+        <p th:unless="${esDueno}" class="empty">Solo la persona que publicó la solicitud puede ver las ofertas.</p>
+
+        <p class="link-secondary"><a th:href="@{/inicio}">&larr; Volver</a></p>
+    </main>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

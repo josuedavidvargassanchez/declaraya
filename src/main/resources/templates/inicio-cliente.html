@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Mis solicitudes</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+<div class="layout">
+    <aside th:replace="~{fragments/sidebar :: sidebar('inicio')}"></aside>
+
+    <main class="content">
+        <div class="welcome">
+            <div>
+                <h2 th:text="${'Hola, ' + usuario.nombre}">Hola</h2>
+                <p class="page-lead">Gestiona tus trámites y revisa las ofertas que has recibido.</p>
+            </div>
+            <a th:href="@{/cliente/solicitudes/nueva}" class="btn"><span th:replace="~{fragments/icons :: i('plus')}"></span> Nueva solicitud</a>
+        </div>
+
+        <p class="success" th:if="${param.editada}">Solicitud actualizada. Avisamos a los contadores que ya habían ofertado.</p>
+        <p class="success" th:if="${param.cancelada}">Solicitud cancelada. Queda guardada en tu historial.</p>
+
+        <div class="stat-cards">
+          <div class="stat-card"><div class="stat-ico c-blue"><span th:replace="~{fragments/icons :: i('file')}"></span></div><div><p class="stat-num" th:text="${totalSolicitudes}">0</p><p class="stat-lbl">Solicitudes</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-green"><span th:replace="~{fragments/icons :: i('check')}"></span></div><div><p class="stat-num" th:text="${solicitudesAbiertas}">0</p><p class="stat-lbl">Abiertas</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-amber"><span th:replace="~{fragments/icons :: i('clock')}"></span></div><div><p class="stat-num" th:text="${ofertasPorRevisar}">0</p><p class="stat-lbl">Ofertas por revisar</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-violet"><span th:replace="~{fragments/icons :: i('handshake')}"></span></div><div><p class="stat-num" th:text="${solicitudesEnProceso}">0</p><p class="stat-lbl">En proceso</p></div></div>
+        </div>
+
+        <h3>Mis solicitudes</h3>
+        <div class="card-grid">
+            <div class="card card-solicitud" th:each="s : ${solicitudes}">
+                <div class="card-top">
+                    <p class="card-title" th:text="${s.titulo}">Título</p>
+                    <span th:class="${'badge badge-' + #strings.toLowerCase(s.estado.name())}"
+                          th:text="${#strings.capitalize(#strings.toLowerCase(#strings.replace(s.estado.name(), '_', ' ')))}">Estado</span>
+                </div>
+                <div class="meta-row">
+                    <span class="chip" th:if="${s.anioGravable != null}" th:text="${'Año ' + s.anioGravable}">Año</span>
+                    <span class="chip" th:if="${s.urgencia != null}"
+                          th:classappend="${s.urgencia == 'Urgente'} ? 'chip-urgente'"
+                          th:text="${s.urgencia}">Urgencia</span>
+                    <span class="chip chip-dinero" th:if="${s.presupuestoMaximo != null}"
+                          th:text="${'Hasta $ ' + #numbers.formatDecimal(s.presupuestoMaximo, 1, 'POINT', 0, 'COMMA')}">Presupuesto</span>
+                </div>
+                <p class="card-subtitle" th:text="${'Publicada el ' + s.fechaCorta}">Fecha</p>
+                <div class="row-actions">
+                    <a th:href="@{'/solicitudes/' + ${s.id}}" class="btn btn-small">Ver detalle</a>
+                    <a th:if="${s.estado.name() == 'ABIERTA'}"
+                       th:href="@{'/cliente/solicitudes/' + ${s.id} + '/editar'}" class="btn btn-small btn-muted">Editar</a>
+                    <form th:if="${s.estado.name() == 'ABIERTA'}"
+                          th:action="@{'/cliente/solicitudes/' + ${s.id} + '/eliminar'}" method="post"
+                          data-confirm="¿Eliminar esta solicitud y sus ofertas?">
+                        <button type="submit" class="btn-small btn-muted">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="empty-state" th:if="${solicitudes.isEmpty()}">
+            <span th:replace="~{fragments/icons :: i('file')}"></span>
+            <h3>Aún no tienes solicitudes</h3>
+            <p>Publica tu primer trámite y empieza a recibir ofertas de contadores.</p>
+            <a th:href="@{/cliente/solicitudes/nueva}" class="btn">Crear mi primera solicitud</a>
+        </div>
+    </main>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<div xmlns:th="http://www.thymeleaf.org" th:fragment="menu(activo)" class="navbar">
+    <a class="brand" th:href="@{/inicio}"><span class="brand-mark">D</span>DeclaraYa</a>
+    <nav class="nav-links">
+        <a th:if="${navRol != null and navRol != 'ADMIN'}" th:href="@{/notificaciones}" class="nav-bell" title="Notificaciones">
+            <span th:replace="~{fragments/icons :: i('bell')}"></span><span class="bell-dot" th:if="${notifCount != null and notifCount > 0}" th:text="${notifCount}">1</span>
+        </a>
+        <a th:href="@{/inicio}" th:classappend="${activo == 'inicio'} ? 'active'">Inicio</a>
+        <a th:href="@{/perfil}" th:classappend="${activo == 'perfil'} ? 'active'">Mi perfil</a>
+        <form th:action="@{/logout}" method="post" class="inline-logout">
+            <button type="submit" class="btn-small btn-muted">Cerrar sesión</button>
+        </form>
+    </nav>
+</div>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Error</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="pub-body">
+<div class="auth-container error-box">
+    <div class="error-ico"><span th:replace="~{fragments/icons :: i('alert')}"></span></div>
+    <h1 th:text="${status}">404</h1>
+    <p class="subtitle" th:text="${error}">Not Found</p>
+    <p th:if="${message}" th:text="${message}"></p>
+    <a th:href="@{/inicio}" class="btn">Volver al inicio</a>
+</div>
+</body>
+</html>

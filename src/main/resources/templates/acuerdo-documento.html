@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>DeclaraYa - Documento del acuerdo</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+<div class="layout">
+    <main class="content content-narrow documento">
+        <h2>Acuerdo de prestación de servicios contables</h2>
+        <p><strong>Acuerdo No.</strong> <span th:text="${acuerdo.id}">1</span>
+           | <strong>Fecha:</strong> <span th:text="${acuerdo.fechaCreacion.toLocalDate()}">2026-01-01</span></p>
+
+        <h3>Partes</h3>
+        <p><strong>Cliente:</strong> <span th:text="${acuerdo.oferta.solicitud.persona.nombre}">Cliente</span>
+           (<span th:text="${acuerdo.oferta.solicitud.persona.email}">correo</span>)</p>
+        <p><strong>Contador:</strong> <span th:text="${acuerdo.oferta.contador.nombre}">Contador</span>
+           - Tarjeta profesional: <span th:text="${acuerdo.oferta.contador.tarjetaProfesional}">TP</span>
+           (<span th:text="${acuerdo.oferta.contador.rol}">Rol</span>)</p>
+
+        <h3>Servicio</h3>
+        <p th:text="${acuerdo.oferta.solicitud.titulo}">Servicio</p>
+        <p th:text="${acuerdo.oferta.solicitud.descripcion}">Descripción</p>
+
+        <h3>Honorarios</h3>
+        <p><strong>Valor pactado:</strong> $ <span th:text="${acuerdo.oferta.valorPropuesto}">0</span></p>
+        <p><strong>Comision de la plataforma:</strong> $ <span th:text="${acuerdo.comisionPlataforma}">0</span></p>
+
+        <h3>Condiciones</h3>
+        <p>Las partes acuerdan que el contador prestara el servicio descrito, que el cliente suministrara la información veraz que se le solicite por el chat del acuerdo, y que los honorarios corresponden al valor pactado. Cualquier diferencia podra reportarse mediante una disputa en la plataforma.</p>
+
+        <div class="firmas">
+            <div class="firma">Cliente</div>
+            <div class="firma">Contador</div>
+        </div>
+
+        <p class="no-print"><button type="button" onclick="window.print()">Imprimir / guardar como PDF</button></p>
+        <p class="link-secondary no-print"><a th:href="@{'/acuerdos/' + ${acuerdo.id} + '/chat'}">Volver al chat</a></p>
+    </main>
+</div>
+
+</body>
+</html>

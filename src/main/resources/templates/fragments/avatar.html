@@ -1,0 +1,6 @@
+<span xmlns:th="http://www.thymeleaf.org" th:fragment="avatar(u)" class="avatar-wrap">
+    <img th:if="${u.fotoPerfil != null}" class="avatar"
+         th:src="@{/usuarios/{id}/foto(id=${u.id},v=${u.fotoPerfil})}" alt="Foto de perfil">
+    <span th:unless="${u.fotoPerfil != null}" class="avatar avatar-inicial"
+          th:text="${#strings.toUpperCase(#strings.substring(u.nombre, 0, 1))}">A</span>
+</span>

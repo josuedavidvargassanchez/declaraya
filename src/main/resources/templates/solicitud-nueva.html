@@ -1,0 +1,160 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Solicitud</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <main class="content content-narrow">
+        <div class="page-title">
+          <h2 th:text="${tituloPagina}">Nueva solicitud</h2>
+          <p class="page-lead">
+            Entre más claro sea tu caso, mejores ofertas recibirás de los
+            contadores.
+          </p>
+        </div>
+
+        <form
+          th:action="@{${accion}}"
+          th:object="${solicitud}"
+          method="post"
+          class="auth-form form-pro"
+        >
+          <fieldset class="form-section">
+            <legend><span class="step">1</span> Tipo de trámite</legend>
+
+            <label for="titulo">¿Qué necesitas?</label>
+            <select id="titulo" th:field="*{titulo}">
+              <option value="">Selecciona una opción</option>
+              <option
+                th:each="op : ${opciones}"
+                th:value="${op}"
+                th:text="${op}"
+              ></option>
+            </select>
+            <p
+              class="error"
+              th:if="${#fields.hasErrors('titulo')}"
+              th:errors="*{titulo}"
+            ></p>
+
+            <div id="aviso-renta" class="aviso-requisitos" style="display: none">
+              <p class="aviso-titulo">Recuerda que debes declarar renta si:</p>
+              <ul>
+                <li>
+                  Fuiste responsable del IVA a 31 de diciembre de 2025.
+                </li>
+                <li>
+                  Tu patrimonio bruto a 31 de diciembre de 2025 fue superior a
+                  4.500 UVT: <strong>$224.096.000</strong>
+                </li>
+                <li>
+                  En 2025 tus ingresos brutos fueron iguales o superiores a
+                  1.400 UVT: <strong>$69.719.000</strong>
+                </li>
+                <li>
+                  En 2025 tus consumos con tarjeta de crédito, tus compras y
+                  consumos, o tus consignaciones e inversiones superaron los
+                  1.400 UVT: <strong>$69.719.000</strong>
+                </li>
+              </ul>
+              <p class="aviso-nota">
+                Basta con cumplir alguno de estos requisitos. UVT de referencia
+                para el año gravable 2025: $49.799.
+              </p>
+            </div>
+
+            <div class="form-row">
+              <div>
+                <label for="anioGravable">Año gravable</label>
+                <select id="anioGravable" th:field="*{anioGravable}">
+                  <option
+                    th:each="a : ${anios}"
+                    th:value="${a}"
+                    th:text="${a}"
+                  ></option>
+                </select>
+                <p
+                  class="error"
+                  th:if="${#fields.hasErrors('anioGravable')}"
+                  th:errors="*{anioGravable}"
+                ></p>
+              </div>
+              <div>
+                <label for="presupuestoMaximo"
+                  >Presupuesto máximo (COP, opcional)</label
+                >
+                <input
+                  type="number"
+                  id="presupuestoMaximo"
+                  min="0"
+                  step="1000"
+                  th:field="*{presupuestoMaximo}"
+                  placeholder="Ej: 300000"
+                />
+                <p
+                  class="error"
+                  th:if="${#fields.hasErrors('presupuestoMaximo')}"
+                  th:errors="*{presupuestoMaximo}"
+                ></p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-section">
+            <legend><span class="step">2</span> Urgencia</legend>
+            <div class="radio-cards">
+              <label class="radio-card" th:each="u : ${urgencias}">
+                <input type="radio" th:field="*{urgencia}" th:value="${u}" />
+                <span th:text="${u}">Normal</span>
+              </label>
+            </div>
+            <p
+              class="error"
+              th:if="${#fields.hasErrors('urgencia')}"
+              th:errors="*{urgencia}"
+            ></p>
+          </fieldset>
+
+          <fieldset class="form-section">
+            <legend><span class="step">3</span> Tu situación</legend>
+            <p class="hint">
+              Marca lo que aplique. Ayuda al contador a calcular mejor el
+              trabajo.
+            </p>
+            <div class="check-grid">
+              <label class="check-item" th:each="sit : ${situacionesOpciones}">
+                <input type="checkbox" th:field="*{situaciones}" th:value="${sit}" />
+                <span th:text="${sit}">Situación</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-section">
+            <legend><span class="step">4</span> Cuéntanos más</legend>
+            <label for="descripcion">Descripción</label>
+            <textarea
+              id="descripcion"
+              th:field="*{descripcion}"
+              rows="5"
+              maxlength="1000"
+              placeholder="Cuéntale al contador tu situación: fuentes de ingreso, documentos que tienes, dudas..."
+            ></textarea>
+          </fieldset>
+
+          <button type="submit">Guardar solicitud</button>
+        </form>
+        <p class="link-secondary">
+          <a th:href="@{/cliente/inicio}">Cancelar</a>
+        </p>
+      </main>
+    </div>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

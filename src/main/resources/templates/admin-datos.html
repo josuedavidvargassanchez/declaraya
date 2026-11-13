@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>DeclaraYa - Datos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+<div class="layout">
+    <aside th:replace="~{fragments/sidebar :: sidebar('datos')}"></aside>
+
+    <main class="content">
+        <h2>Datos</h2>
+
+        <h3>Ingresos de la plataforma</h3>
+        <div class="stat-grid">
+            <div class="stat color-ingreso">
+                <p class="stat-label">Ingresos totales (comisiones)</p>
+                <p class="stat-valor" th:text="${'$ ' + #numbers.formatDecimal(ingresosTotales, 1, 'POINT', 0, 'COMMA')}">$ 0</p>
+            </div>
+            <div class="stat color-ingreso">
+                <p class="stat-label">De acuerdos finalizados</p>
+                <p class="stat-valor" th:text="${'$ ' + #numbers.formatDecimal(ingresosFinalizados, 1, 'POINT', 0, 'COMMA')}">$ 0</p>
+            </div>
+            <div class="stat color-ingreso">
+                <p class="stat-label">De acuerdos activos</p>
+                <p class="stat-valor" th:text="${'$ ' + #numbers.formatDecimal(ingresosActivos, 1, 'POINT', 0, 'COMMA')}">$ 0</p>
+            </div>
+            <div class="stat color-ingreso">
+                <p class="stat-label">Acuerdos creados</p>
+                <p class="stat-valor" th:text="${totalAcuerdos}">0</p>
+            </div>
+        </div>
+
+        <h3>Usuarios</h3>
+        <div class="stat-grid">
+            <div class="stat color-persona">
+                <p class="stat-label">Personas naturales</p>
+                <p class="stat-valor" th:text="${personas}">0</p>
+            </div>
+            <div class="stat color-publico">
+                <p class="stat-label">Contadores públicos verificados</p>
+                <p class="stat-valor" th:text="${publicos}">0</p>
+                <p class="stat-sub" th:text="${publicosPendientes + ' pendientes'}">0 pendientes</p>
+            </div>
+            <div class="stat color-practicante">
+                <p class="stat-label">Practicantes verificados</p>
+                <p class="stat-valor" th:text="${practicantes}">0</p>
+                <p class="stat-sub" th:text="${practicantesPendientes + ' pendientes'}">0 pendientes</p>
+            </div>
+        </div>
+
+        <h3>Comparación</h3>
+        <div class="barras">
+            <div class="barra-fila color-persona">
+                <span class="barra-etiqueta">Personas naturales</span>
+                <div class="barra-fondo"><div class="barra" th:style="${'width:' + porcPersonas + '%'}"></div></div>
+                <span class="barra-numero" th:text="${personas}">0</span>
+            </div>
+            <div class="barra-fila color-publico">
+                <span class="barra-etiqueta">Contadores públicos</span>
+                <div class="barra-fondo"><div class="barra" th:style="${'width:' + porcPublicos + '%'}"></div></div>
+                <span class="barra-numero" th:text="${publicos}">0</span>
+            </div>
+            <div class="barra-fila color-practicante">
+                <span class="barra-etiqueta">Practicantes</span>
+                <div class="barra-fondo"><div class="barra" th:style="${'width:' + porcPracticantes + '%'}"></div></div>
+                <span class="barra-numero" th:text="${practicantes}">0</span>
+            </div>
+        </div>
+
+        <h3>Exportar datos para Power BI</h3>
+        <p class="page-lead">Descarga los datos reales de la plataforma en CSV y cárgalos en Power BI (Obtener datos &rarr; Texto/CSV).</p>
+        <div class="meta-row export-row">
+            <a th:href="@{/admin/exportar/acuerdos}" class="btn btn-small">Acuerdos (ventas y comisiones)</a>
+            <a th:href="@{/admin/exportar/solicitudes}" class="btn btn-small">Solicitudes</a>
+            <a th:href="@{/admin/exportar/ofertas}" class="btn btn-small">Ofertas</a>
+            <a th:href="@{/admin/exportar/usuarios}" class="btn btn-small">Usuarios</a>
+            <a th:href="@{/admin/exportar/indicadores_dian}" class="btn btn-small btn-muted">Indicadores DIAN</a>
+        </div>
+
+        <h3>Datos públicos de la DIAN</h3>
+        <p class="hint">Cifras agregadas que la DIAN publica (recaudo en millones de pesos, personas y UVT). La DIAN no publica información de contribuyentes individuales.</p>
+        <div class="tabla-wrap">
+            <table class="tabla">
+                <thead><tr><th>Año</th><th>Periodo</th><th>Categoría</th><th>Concepto</th><th>Valor</th><th>Unidad</th><th>Fuente</th></tr></thead>
+                <tbody>
+                <tr th:each="i : ${indicadores}">
+                    <td th:text="${i.anio}">2025</td>
+                    <td th:text="${i.periodo}">Año completo</td>
+                    <td th:text="${i.categoria}">Categoría</td>
+                    <td th:text="${i.concepto}">Concepto</td>
+                    <td th:text="${#numbers.formatDecimal(i.valor, 1, 'POINT', 0, 'COMMA')}">0</td>
+                    <td th:text="${i.unidad}">COP</td>
+                    <td th:text="${i.fuente}">Fuente</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${powerBiUrl != null and !powerBiUrl.isBlank()}">
+            <h3>Informe de Power BI</h3>
+            <iframe class="powerbi-frame" th:src="${powerBiUrl}" title="Informe de Power BI" allowfullscreen></iframe>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

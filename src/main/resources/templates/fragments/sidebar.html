@@ -1,0 +1,26 @@
+<aside xmlns:th="http://www.thymeleaf.org" class="sidebar" th:fragment="sidebar(activo)">
+    <th:block th:if="${navRol == 'PERSONA'}">
+        <a th:href="@{/cliente/inicio}" th:classappend="${activo == 'inicio'} ? 'active'"><span th:replace="~{fragments/icons :: i('file')}"></span>Mis solicitudes</a>
+        <a th:href="@{/cliente/solicitudes/nueva}"><span th:replace="~{fragments/icons :: i('plus')}"></span>Nueva solicitud</a>
+        <a th:href="@{/acuerdos}" th:classappend="${activo == 'acuerdos'} ? 'active'"><span th:replace="~{fragments/icons :: i('handshake')}"></span>Mis acuerdos</a>
+    </th:block>
+    <th:block th:if="${navRol == 'CONTADOR_PUBLICO'}">
+        <a th:href="@{/contador/inicio}" th:classappend="${activo == 'inicio'} ? 'active'"><span th:replace="~{fragments/icons :: i('briefcase')}"></span>Solicitudes</a>
+        <a th:href="@{/acuerdos}" th:classappend="${activo == 'acuerdos'} ? 'active'"><span th:replace="~{fragments/icons :: i('handshake')}"></span>Mis acuerdos</a>
+    </th:block>
+    <th:block th:if="${navRol == 'CONTADOR_PRACTICANTE'}">
+        <a th:href="@{/practicante/inicio}" th:classappend="${activo == 'inicio'} ? 'active'"><span th:replace="~{fragments/icons :: i('briefcase')}"></span>Solicitudes</a>
+        <a th:href="@{/acuerdos}" th:classappend="${activo == 'acuerdos'} ? 'active'"><span th:replace="~{fragments/icons :: i('handshake')}"></span>Mis acuerdos</a>
+    </th:block>
+    <th:block th:if="${navRol == 'ADMIN'}">
+        <a th:href="@{/admin/inicio}" th:classappend="${activo == 'inicio'} ? 'active'"><span th:replace="~{fragments/icons :: i('shield')}"></span>Panel</a>
+        <a th:href="@{/admin/usuarios}" th:classappend="${activo == 'usuarios'} ? 'active'"><span th:replace="~{fragments/icons :: i('users')}"></span>Usuarios</a>
+        <a th:href="@{/admin/solicitudes}" th:classappend="${activo == 'solicitudes'} ? 'active'"><span th:replace="~{fragments/icons :: i('file')}"></span>Solicitudes</a>
+        <a th:href="@{/admin/datos}" th:classappend="${activo == 'datos'} ? 'active'"><span th:replace="~{fragments/icons :: i('chart')}"></span>Datos y Power BI</a>
+    </th:block>
+    <a th:if="${navRol != 'ADMIN'}" th:href="@{/notificaciones}" th:classappend="${activo == 'notificaciones'} ? 'active'"><span th:replace="~{fragments/icons :: i('bell')}"></span>Notificaciones
+        <span class="pill" th:if="${notifCount != null and notifCount > 0}" th:text="${notifCount}">2</span></a>
+    <div class="sidebar-sep"></div>
+    <a th:href="@{/ayuda}"><span th:replace="~{fragments/icons :: i('help')}"></span>Ayuda</a>
+    <a th:href="@{/politica-datos}"><span th:replace="~{fragments/icons :: i('lock')}"></span>Política de datos</a>
+</aside>

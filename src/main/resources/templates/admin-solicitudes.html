@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Solicitudes</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+<div class="layout">
+    <aside th:replace="~{fragments/sidebar :: sidebar('solicitudes')}"></aside>
+    <main class="content">
+        <div class="content-header">
+            <div>
+                <h2>Solicitudes</h2>
+                <p class="page-lead">Todas las solicitudes de la plataforma. Cambia su estado o elimínalas.</p>
+            </div>
+            <div class="row-actions">
+                <a th:href="@{/admin/exportar/solicitudes}" class="btn btn-small btn-muted">Exportar solicitudes</a>
+                <a th:href="@{/admin/exportar/ofertas}" class="btn btn-small btn-muted">Exportar ofertas</a>
+            </div>
+        </div>
+
+        <p class="success" th:if="${param.actualizada}">Estado actualizado.</p>
+        <p class="success" th:if="${param.eliminada}">Solicitud eliminada.</p>
+        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+
+        <div class="tabla-wrap">
+            <table class="tabla">
+                <thead><tr><th>#</th><th>Trámite</th><th>Cliente</th><th>Año</th><th>Urgencia</th><th>Presupuesto</th><th>Fecha</th><th>Estado</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="s : ${solicitudes}">
+                    <td th:text="${s.id}">1</td>
+                    <td><a th:href="@{'/solicitudes/' + ${s.id}}" th:text="${s.titulo}">Trámite</a></td>
+                    <td th:text="${s.persona.nombre}">Cliente</td>
+                    <td th:text="${s.anioGravable != null ? s.anioGravable : '—'}">2025</td>
+                    <td th:text="${s.urgencia != null ? s.urgencia : '—'}">Normal</td>
+                    <td th:text="${s.presupuestoMaximo != null ? '$ ' + #numbers.formatDecimal(s.presupuestoMaximo, 1, 'POINT', 0, 'COMMA') : '—'}">—</td>
+                    <td th:text="${s.fechaCorta}">01/01/2026</td>
+                    <td>
+                        <form th:action="@{'/admin/solicitudes/' + ${s.id} + '/estado'}" method="post" class="form-inline estado-form">
+                            <select name="estado">
+                                <option th:each="e : ${estados}" th:value="${e.name()}" th:text="${e.name()}" th:selected="${s.estado == e}"></option>
+                            </select>
+                            <button type="submit" class="btn-small">Guardar</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form th:action="@{'/admin/solicitudes/' + ${s.id} + '/eliminar'}" method="post" class="form-inline"
+                              data-confirm="¿Eliminar esta solicitud y sus ofertas?">
+                            <button type="submit" class="btn-small btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="empty-state" th:if="${solicitudes.isEmpty()}">
+            <span th:replace="~{fragments/icons :: i('file')}"></span>
+            <h3>No hay solicitudes</h3>
+        </div>
+    </main>
+</div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>
