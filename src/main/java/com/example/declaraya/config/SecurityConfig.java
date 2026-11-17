@@ -33,6 +33,9 @@ public class SecurityConfig {
                         .requestMatchers("/contador/**").hasRole("CONTADOR_PUBLICO")
                         .requestMatchers("/practicante/**").hasRole("CONTADOR_PRACTICANTE")
                         .requestMatchers("/cliente/**").hasRole("PERSONA")
+                        // ver/descargar documentos del cliente: cualquier usuario autenticado, pero el
+                        // controlador exige DocumentoClienteService.puedeVer y responde 403 si no aplica
+                        .requestMatchers(HttpMethod.GET, "/documentos/*", "/documentos/*/descargar").authenticated()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form

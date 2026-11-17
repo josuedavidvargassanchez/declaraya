@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Perfil del contador</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+<div class="layout">
+    <main class="content content-narrow">
+        <!-- solo datos profesionales: sin correo, telefono, documento ni archivos -->
+        <div class="perfil-card">
+            <img th:if="${contador.fotoPerfil != null}" class="avatar avatar-grande"
+                 th:src="@{/usuarios/{id}/foto(id=${contador.id},v=${contador.fotoPerfil})}" alt="Foto del contador">
+            <span th:unless="${contador.fotoPerfil != null}" class="avatar avatar-inicial avatar-grande"
+                  th:text="${#strings.toUpperCase(#strings.substring(contador.nombre, 0, 1))}">C</span>
+            <div>
+                <h2 class="perfil-nombre" th:text="${contador.nombre}">Nombre</h2>
+                <p class="card-subtitle" th:text="${contador.rol.etiqueta}">Contador público</p>
+                <span class="badge badge-aprobado insignia-verificado" th:if="${verificado}">✓ Verificado por DeclaraYa</span>
+            </div>
+        </div>
+
+        <div class="stat-cards">
+            <div class="stat-card"><div class="stat-ico c-amber"><span th:replace="~{fragments/icons :: i('star')}"></span></div>
+                <div><p class="stat-num" th:text="${promedio != null ? #numbers.formatDecimal(promedio, 1, 1) : '—'}">4.5</p>
+                    <p class="stat-lbl" th:text="${cantidadCalificaciones + ' calificación(es)'}">calificaciones</p></div></div>
+            <div class="stat-card"><div class="stat-ico c-green"><span th:replace="~{fragments/icons :: i('check')}"></span></div>
+                <div><p class="stat-num" th:text="${finalizados}">0</p><p class="stat-lbl">Acuerdos finalizados</p></div></div>
+        </div>
+
+        <section class="detalle-bloque">
+            <h3>Información profesional</h3>
+            <dl class="ficha">
+                <dt>Tipo</dt><dd th:text="${contador.rol.etiqueta}">-</dd>
+                <dt>Tarjeta profesional</dt><dd th:text="${contador.tarjetaProfesional != null ? contador.tarjetaProfesional : 'No registrada'}">-</dd>
+                <th:block th:if="${contador.rol.name() == 'CONTADOR_PRACTICANTE'}">
+                    <dt>Mentor</dt>
+                    <dd>
+                        <a th:if="${contador.mentor != null}" th:href="@{'/contadores/' + ${contador.mentor.id}}" th:text="${contador.mentor.nombre}">Mentor</a>
+                        <span th:if="${contador.mentor == null}">Sin mentor asignado</span>
+                    </dd>
+                </th:block>
+                <dt>Años de experiencia</dt><dd th:text="${contador.aniosExperiencia != null ? contador.aniosExperiencia : 'No registrado'}">-</dd>
+                <dt>Tarifa base</dt>
+                <dd th:text="${'$ ' + #numbers.formatDecimal(contador.tarifaBase, 1, 'POINT', 0, 'COMMA')}">-</dd>
+                <dt>Especialidades</dt>
+                <dd>
+                    <span class="chip chip-suave" th:each="e : ${contador.especialidadesLista}" th:text="${e}">Trámite</span>
+                    <span th:if="${contador.especialidadesLista.isEmpty()}">No registradas</span>
+                </dd>
+            </dl>
+            <p class="detalle-etiqueta">Descripción</p>
+            <p th:text="${contador.descripcionProfesional != null ? contador.descripcionProfesional : 'El contador aún no ha escrito una descripción.'}">Descripción</p>
+        </section>
+
+        <section class="detalle-bloque">
+            <h3>Últimas reseñas</h3>
+            <div class="list">
+                <div class="list-item resena" th:each="r : ${resenas}">
+                    <span class="estrellas" th:text="${#strings.repeat('★', r.puntaje) + #strings.repeat('☆', 5 - r.puntaje)}">★★★★★</span>
+                    <span class="list-meta" th:text="${r.acuerdo.oferta.solicitud.titulo + ' · ' + #temporals.format(r.fecha, 'dd/MM/yyyy')}">Trámite</span>
+                    <p class="resena-texto" th:text="${r.comentario}">Comentario</p>
+                </div>
+                <p class="empty" th:if="${resenas.isEmpty()}">Aún no tiene reseñas.</p>
+            </div>
+        </section>
+
+        <p class="link-secondary"><a href="javascript:history.back()">&larr; Volver</a></p>
+    </main>
+</div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

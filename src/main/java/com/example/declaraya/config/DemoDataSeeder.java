@@ -4,17 +4,24 @@ import com.example.declaraya.dto.NuevaSolicitudDTO;
 import com.example.declaraya.enums.EstadoAcuerdo;
 import com.example.declaraya.enums.EstadoOferta;
 import com.example.declaraya.enums.EstadoSolicitud;
+import com.example.declaraya.enums.EstadoVerificacion;
+import com.example.declaraya.enums.EtapaAcuerdo;
+import com.example.declaraya.enums.ResultadoDisputa;
 import com.example.declaraya.enums.Rol;
+import com.example.declaraya.enums.TipoActividad;
 import com.example.declaraya.models.Acuerdo;
 import com.example.declaraya.models.Disputa;
 import com.example.declaraya.models.Oferta;
 import com.example.declaraya.models.SolicitudDeclaracion;
 import com.example.declaraya.models.Supervision;
 import com.example.declaraya.models.Usuario;
+import com.example.declaraya.models.Calificacion;
 import com.example.declaraya.repositories.AcuerdoRepository;
+import com.example.declaraya.repositories.CalificacionRepository;
 import com.example.declaraya.repositories.OfertaRepository;
 import com.example.declaraya.repositories.SolicitudDeclaracionRepository;
 import com.example.declaraya.services.AcuerdoService;
+import com.example.declaraya.services.ActividadAcuerdoService;
 import com.example.declaraya.services.DisputaService;
 import com.example.declaraya.services.OfertaService;
 import com.example.declaraya.services.SolicitudDeclaracionService;
@@ -23,6 +30,7 @@ import com.example.declaraya.services.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -44,6 +52,7 @@ import java.util.Random;
  * Todas las cuentas de ejemplo usan la clave "demo1234".
  */
 @Component
+@Order(20) // despues de DataSeeder, para que exista el administrador que resuelve la disputa de ejemplo
 public class DemoDataSeeder implements CommandLineRunner {
 
     private static final String MARCADOR = "mauricio.salazar@example.com";
@@ -138,11 +147,57 @@ public class DemoDataSeeder implements CommandLineRunner {
     @Autowired
     private AcuerdoRepository acuerdoRepository;
 
+    @Autowired
+    private ActividadAcuerdoService actividadService;
+
+    @Autowired
+    private CalificacionRepository calificacionRepository;
+
     @Override
     public void run(String... args) {
-        if (!activo || usuarioService.buscarPorEmail(MARCADOR).isPresent()) {
+        if (!activo) {
             return;
         }
+        if (usuarioService.buscarPorEmail(MARCADOR).isEmpty()) {
+            cargarDatos();
+        }
+        // independiente de la carga inicial: tambien completa las bases creadas antes de existir las calificaciones
+        completarCalificaciones();
+    }
+
+    private static final String[] COMENTARIOS = {
+            "Muy claro al explicar cada paso y entregó antes de la fecha.",
+            "Respondió rápido por el chat y revisó todos mis soportes.",
+            "Buen trabajo, aunque tuve que recordarle un par de documentos.",
+            "Excelente atención, lo recomiendo.",
+            "Cumplió con lo acordado y resolvió mis dudas sobre deducciones."
+    };
+
+    // calificaciones de ejemplo para ~60% de los acuerdos finalizados, solo si la tabla esta vacia
+    private void completarCalificaciones() {
+        if (calificacionRepository.count() > 0) {
+            return;
+        }
+        Random rnd = new Random(7);
+        int creadas = 0;
+        for (Acuerdo a : acuerdoRepository.findAll()) {
+            if (a.getEstado() != EstadoAcuerdo.FINALIZADO || rnd.nextInt(10) >= 6) {
+                continue;
+            }
+            int puntaje = 3 + rnd.nextInt(3);
+            String comentario = rnd.nextInt(4) == 0 ? null : COMENTARIOS[rnd.nextInt(COMENTARIOS.length)];
+            Calificacion c = new Calificacion(a, a.getOferta().getSolicitud().getPersona(), a.getOferta().getContador(),
+                    puntaje, comentario);
+            c.setFecha(a.getFechaCreacion() != null ? a.getFechaCreacion().plusDays(8) : LocalDateTime.now());
+            calificacionRepository.save(c);
+            creadas++;
+        }
+        if (creadas > 0) {
+            System.out.println("Calificaciones de ejemplo creadas: " + creadas);
+        }
+    }
+
+    private void cargarDatos() {
         Random rnd = new Random(2026);
 
         List<Usuario> publicos = new ArrayList<>();
@@ -188,6 +243,11 @@ public class DemoDataSeeder implements CommandLineRunner {
         String tarjeta = rol == Rol.PERSONA ? null : "TP-DEMO-" + String.format("%04d", numero);
         Usuario u = usuarioService.registrar(nombre, correo(nombre), CLAVE_DEMO, rol, tarjeta);
         u.setVerificado(rol == Rol.PERSONA || verificado);
+        // estado coherente con "verificado": los contadores de ejemplo verificados quedan APROBADO
+        // y los demas PENDIENTE (sin soportes: deben subirlos desde su perfil antes de poder aprobarse)
+        if (rol != Rol.PERSONA) {
+            u.setEstadoVerificacion(verificado ? EstadoVerificacion.APROBADO : EstadoVerificacion.PENDIENTE);
+        }
         u.setMentor(mentor);
         if (rol != Rol.PERSONA) {
             u.setTarifaBase(BigDecimal.valueOf((rnd.nextInt(10) + 3) * 50000L));
@@ -293,8 +353,12 @@ public class DemoDataSeeder implements CommandLineRunner {
             if (practicante) {
                 factor = factor * 0.65;
             }
+            // fecha estimada de entrega: los casos en curso vencen pronto (para probar los recordatorios)
+            LocalDate entrega = estado == 1
+                    ? LocalDate.now().plusDays(1 + rnd.nextInt(25))
+                    : fecha.toLocalDate().plusDays(5 + rnd.nextInt(20));
             Oferta o = ofertaService.crear(solicitud, c, MENSAJES_OFERTA[rnd.nextInt(MENSAJES_OFERTA.length)],
-                    BigDecimal.valueOf(redondear((long) (base * factor))));
+                    BigDecimal.valueOf(redondear((long) (base * factor))), entrega);
             o.setFechaCreacion(fecha.plusHours(1 + rnd.nextInt(47)));
             ofertas.add(o);
         }
@@ -331,10 +395,15 @@ public class DemoDataSeeder implements CommandLineRunner {
             acuerdo.setFechaCreacion(ganadora.getFechaCreacion().plusDays(1 + rnd.nextInt(3)));
             acuerdo.setEstado(estado == 2 ? EstadoAcuerdo.FINALIZADO : EstadoAcuerdo.ACTIVO);
             acuerdo = acuerdoRepository.save(acuerdo);
+            actividadService.alinearFechaCreacion(acuerdo);
+            LocalDateTime inicio = acuerdo.getFechaCreacion();
             if (contador.getRol() == Rol.CONTADOR_PRACTICANTE && contador.getMentor() != null) {
                 Supervision supervision = supervisionService.asignar(contador, contador.getMentor(), acuerdo);
                 supervisionService.aprobar(supervision.getId(), contador.getMentor());
+                actividadService.registrar(acuerdo, contador.getMentor(), TipoActividad.MENTOR_APROBO,
+                        contador.getMentor().getNombre() + " aprobó que el practicante atienda este caso", inicio.plusHours(3));
             }
+            completarEtapa(acuerdo, estado == 2, rnd, inicio);
             if (estado == 1) {
                 activos.merge(contador.getId(), 1, Integer::sum);
             }
@@ -347,6 +416,33 @@ public class DemoDataSeeder implements CommandLineRunner {
         solicitudRepository.save(solicitud);
     }
 
+    // etapa coherente con el estado y algunas actividades de ejemplo (fechas en el pasado)
+    private void completarEtapa(Acuerdo acuerdo, boolean finalizado, Random rnd, LocalDateTime inicio) {
+        Usuario contador = acuerdo.getOferta().getContador();
+        Usuario cliente = acuerdo.getOferta().getSolicitud().getPersona();
+        boolean practicante = contador.getRol() == Rol.CONTADOR_PRACTICANTE;
+        if (finalizado) {
+            actividadService.registrar(acuerdo, contador, TipoActividad.CAMBIO_ETAPA,
+                    "De Documentación a Preparación", inicio.plusDays(2));
+            if (practicante) {
+                actividadService.registrar(acuerdo, contador, TipoActividad.CAMBIO_ETAPA,
+                        "De Preparación a Revisión del mentor", inicio.plusDays(5));
+            }
+            actividadService.registrar(acuerdo, contador, TipoActividad.ENTREGA_ENVIADA,
+                    "Trabajo entregado (dato de ejemplo, sin archivo adjunto)", inicio.plusDays(6));
+            actividadService.registrar(acuerdo, cliente, TipoActividad.RECEPCION_CONFIRMADA,
+                    "El cliente confirmó la recepción del trabajo", inicio.plusDays(7));
+            acuerdo.setEtapa(EtapaAcuerdo.FINALIZADO);
+        } else if (rnd.nextBoolean()) {
+            actividadService.registrar(acuerdo, contador, TipoActividad.CAMBIO_ETAPA,
+                    "De Documentación a Preparación", inicio.plusDays(1));
+            acuerdo.setEtapa(EtapaAcuerdo.PREPARACION);
+        } else {
+            acuerdo.setEtapa(EtapaAcuerdo.DOCUMENTACION);
+        }
+        acuerdoRepository.save(acuerdo);
+    }
+
     private void crearDisputas(List<Acuerdo> acuerdos) {
         if (acuerdos.size() < 4) {
             return;
@@ -357,6 +453,10 @@ public class DemoDataSeeder implements CommandLineRunner {
         Acuerdo antiguo = acuerdos.get(0);
         Disputa resuelta = disputaService.abrir(antiguo, antiguo.getOferta().getContador(),
                 "El cliente no ha enviado los soportes acordados.");
-        disputaService.resolver(resuelta.getId());
+        Usuario admin = usuarioService.listarPorRol(Rol.ADMIN).stream().findFirst().orElse(null);
+        if (admin != null) {
+            disputaService.resolver(resuelta.getId(), admin, ResultadoDisputa.A_FAVOR_CONTADOR,
+                    "Ejemplo: el cliente reconoció en el chat que no había enviado los soportes acordados.");
+        }
     }
 }

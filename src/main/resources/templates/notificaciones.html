@@ -23,8 +23,14 @@
             </form>
         </div>
 
+        <nav class="filtros" aria-label="Filtrar notificaciones">
+            <a th:href="@{/notificaciones}" th:classappend="${filtro == 'todas'} ? 'activo'">Todas</a>
+            <a th:href="@{/notificaciones(filtro='pendientes')}" th:classappend="${filtro == 'pendientes'} ? 'activo'">Pendientes</a>
+            <a th:href="@{/notificaciones(filtro='leidas')}" th:classappend="${filtro == 'leidas'} ? 'activo'">Leídas</a>
+        </nav>
+
         <div class="notif-list">
-            <a class="notif" th:each="n : ${notificaciones}" th:href="@{${n.enlace != null ? n.enlace : '/inicio'}}"
+            <a class="notif" th:each="n : ${notificaciones}" th:href="@{'/notificaciones/' + ${n.id} + '/abrir'}"
                th:classappend="${!n.leida} ? 'notif-nueva'">
                 <span class="notif-ico"><span th:replace="~{fragments/icons :: i('bell')}"></span></span>
                 <span class="notif-texto">
@@ -36,7 +42,7 @@
         </div>
         <div class="empty-state" th:if="${notificaciones.isEmpty()}">
             <span th:replace="~{fragments/icons :: i('bell')}"></span>
-            <h3>Estás al día</h3>
+            <h3 th:text="${filtro == 'leidas' ? 'No hay notificaciones leídas' : 'Estás al día'}">Estás al día</h3>
             <p>Cuando haya novedades, las verás aquí.</p>
         </div>
     </main>

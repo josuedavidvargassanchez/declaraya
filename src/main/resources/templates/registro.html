@@ -10,7 +10,8 @@
 <div class="auth-container">
     <h1>Crear cuenta</h1>
 
-    <form th:action="@{/registro}" th:object="${registro}" method="post" class="auth-form">
+    <form th:action="@{/registro(_csrf=${_csrf.token})}" th:object="${registro}" method="post"
+          enctype="multipart/form-data" class="auth-form">
         <label for="nombre">Nombre completo</label>
         <input type="text" id="nombre" th:field="*{nombre}">
         <p class="error" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}"></p>
@@ -32,6 +33,19 @@
         <label for="tarjetaProfesional">Tarjeta profesional (solo contadores)</label>
         <input type="text" id="tarjetaProfesional" th:field="*{tarjetaProfesional}">
         <p class="error" th:if="${#fields.hasErrors('tarjetaProfesional')}" th:errors="*{tarjetaProfesional}"></p>
+
+        <div class="auth-form" data-solo-contador>
+            <label for="soporteTarjeta">Soporte de la tarjeta profesional (obligatorio)</label>
+            <input type="file" id="soporteTarjeta" name="soporteTarjeta" accept=".pdf,.jpg,.jpeg,.png" data-requerido-contador>
+            <p class="error" th:if="${errorSoporteTarjeta}" th:text="${errorSoporteTarjeta}"></p>
+
+            <label for="soporteDocumento">Documento de identidad (opcional)</label>
+            <input type="file" id="soporteDocumento" name="soporteDocumento" accept=".pdf,.jpg,.jpeg,.png">
+            <p class="error" th:if="${errorSoporteDocumento}" th:text="${errorSoporteDocumento}"></p>
+
+            <p class="hint">PDF, JPG o PNG de máximo 10 MB. El administrador revisará tus documentos antes de habilitarte para ofertar.
+                Si el formulario muestra un error, vuelve a seleccionar los archivos.</p>
+        </div>
 
         <div class="checkbox-row">
             <input type="checkbox" id="aceptaPolitica" th:field="*{aceptaPolitica}">

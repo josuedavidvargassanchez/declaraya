@@ -1,0 +1,21 @@
+<!-- aviso del estado de verificacion para los paneles del contador y del practicante -->
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="aviso(usuario)">
+    <div class="banner-warning" th:if="${(usuario.estadoVerificacion == null and !usuario.verificado)
+                                         or (usuario.estadoVerificacion != null and usuario.estadoVerificacion.name() == 'PENDIENTE')}">
+        Tu cuenta aun no ha sido verificada por el administrador. Podras enviar ofertas cuando se valide tu tarjeta profesional.
+        <span th:if="${usuario.soporteTarjetaProfesional == null}">
+            Aún no has adjuntado el soporte de tu tarjeta profesional: <a th:href="@{/perfil}">súbelo en Mi perfil</a>.
+        </span>
+    </div>
+    <div class="banner-warning banner-verificacion" th:if="${usuario.estadoVerificacion != null and usuario.estadoVerificacion.name() == 'CORRECCION_SOLICITADA'}">
+        <strong>El administrador pidió una corrección en tu verificación.</strong>
+        <p th:text="${usuario.observacionVerificacion != null ? usuario.observacionVerificacion : 'No registrado'}">Observación</p>
+        <a th:href="@{/perfil}" class="btn btn-small">Subir nuevo soporte</a>
+    </div>
+    <div class="banner-warning banner-rechazo" th:if="${usuario.estadoVerificacion != null and usuario.estadoVerificacion.name() == 'RECHAZADO'}">
+        <strong>Tu verificación fue rechazada.</strong>
+        <p th:text="${'Motivo: ' + (usuario.motivoRechazo != null ? usuario.motivoRechazo : 'No registrado')}">Motivo</p>
+        <p th:if="${usuario.observacionVerificacion != null}" th:text="${'Observación: ' + usuario.observacionVerificacion}">Observación</p>
+        <a th:href="@{/perfil}" class="btn btn-small">Subir nuevo soporte</a>
+    </div>
+</th:block>

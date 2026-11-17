@@ -20,7 +20,8 @@ public class Mensaje {
     @JoinColumn(name = "remitente_id", nullable = false)
     private Usuario remitente;
 
-    @Column(length = 1000)
+    // los participantes escriben maximo 1000 caracteres; el resto es para el prefijo de la administracion
+    @Column(length = 1100)
     private String contenido;
 
     private LocalDateTime fechaEnvio = LocalDateTime.now();

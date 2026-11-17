@@ -55,14 +55,38 @@
             </form>
         </div>
 
+        <section class="detalle-bloque" th:if="${verDocumentos}">
+            <div class="content-header seccion-con-enlace">
+                <h3>Documentos de esta solicitud</h3>
+                <button type="button" class="btn-small" data-abrir-modal="modal-doc-subir"
+                        th:if="${esDueno and solicitud.estado.name() != 'CERRADA'}">
+                    <span th:replace="~{fragments/icons :: i('plus')}"></span> Subir documento</button>
+            </div>
+            <p class="success" th:if="${param.documentoSubido}">Documento subido y vinculado a esta solicitud.</p>
+            <p class="success" th:if="${param.documentoReemplazado}">Archivo reemplazado.</p>
+            <p class="success" th:if="${param.documentoVinculado}">Solicitud relacionada actualizada.</p>
+            <p class="success" th:if="${param.documentoEliminado}">Documento eliminado.</p>
+            <p class="error" th:if="${param.errorDocumento}" th:text="${param.errorDocumento}">Error</p>
+            <p class="hint" th:unless="${esDueno}">Documentos que compartió el cliente para este trámite (solo lectura).</p>
+            <th:block th:replace="~{fragments/checklist :: checklist(${checklist}, ${requerimientos}, ${esDueno and solicitud.estado.name() != 'CERRADA'})}"></th:block>
+            <p class="row-actions" th:if="${acuerdoSolicitud != null}">
+                <a th:href="@{'/acuerdos/' + ${acuerdoSolicitud.id}}" class="btn btn-small btn-muted">Ver detalle del acuerdo</a>
+            </p>
+            <p class="detalle-etiqueta">Documentos cargados</p>
+            <th:block th:replace="~{fragments/documentos :: lista(${documentos}, ${esDueno}, ${'/solicitudes/' + solicitud.id},
+                      ${esDueno ? 'Aún no hay documentos en esta solicitud. Súbelos aquí o vincúlalos desde Mis documentos.' : 'El cliente aún no ha compartido documentos.'})}"></th:block>
+        </section>
+
         <div th:if="${esDueno}">
             <h3>Ofertas recibidas</h3>
             <div class="list">
                 <div class="list-item" th:each="o : ${ofertas}">
                     <span th:replace="~{fragments/avatar :: avatar(${o.contador})}"></span>
-                    <span><strong th:text="${o.contador.nombre}">Contador</strong><br>
-                        <small class="card-subtitle" th:text="${o.contador.rol}">Rol</small></span>
+                    <span><a th:href="@{'/contadores/' + ${o.contador.id}}"><strong th:text="${o.contador.nombre}">Contador</strong></a><br>
+                        <small class="card-subtitle" th:text="${o.contador.rol.etiqueta}">Rol</small>
+                        <small class="card-subtitle"> · <a th:href="@{'/contadores/' + ${o.contador.id}}">Ver perfil y calificaciones</a></small></span>
                     <span class="precio" th:text="${'$ ' + #numbers.formatDecimal(o.valorPropuesto, 1, 'POINT', 0, 'COMMA')}">Valor</span>
+                    <span class="chip" th:text="${o.fechaEntregaEstimada != null ? 'Entrega estimada: ' + #temporals.format(o.fechaEntregaEstimada, 'dd/MM/yyyy') : 'Entrega estimada: No registrada'}">Entrega</span>
                     <span th:class="${'badge badge-' + #strings.toLowerCase(o.estado.name())}"
                           th:text="${#strings.capitalize(#strings.toLowerCase(#strings.replace(o.estado.name(), '_', ' ')))}">Estado</span>
                     <span class="oferta-mensaje" th:text="${o.mensaje}">Mensaje</span>
@@ -86,6 +110,10 @@
         <p class="link-secondary"><a th:href="@{/inicio}">&larr; Volver</a></p>
     </main>
 </div>
+
+<th:block th:if="${esDueno}">
+    <th:block th:replace="~{fragments/documentos :: modales(${solicitud.id}, ${'/solicitudes/' + solicitud.id})}"></th:block>
+</th:block>
 
 <script th:src="@{/js/app.js}"></script>
 </body>

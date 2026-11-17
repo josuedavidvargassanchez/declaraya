@@ -43,7 +43,16 @@
                                     th:selected="${u.mentor != null and u.mentor.id == m.id}"></option>
                         </select></div>
                 </div>
-                <label class="check-item check-solo"><input type="checkbox" name="verificado" value="true" th:checked="${u.verificado}"> <span>Contador verificado (puede ofertar)</span></label>
+                <div th:if="${u.contador}" class="estado-solo-lectura">
+                    <span class="detalle-etiqueta">Estado de verificación</span>
+                    <span th:if="${u.estadoVerificacion != null}"
+                          th:class="${'badge badge-' + #strings.toLowerCase(u.estadoVerificacion.name())}"
+                          th:text="${u.estadoVerificacion.etiqueta}">Pendiente</span>
+                    <span th:if="${u.estadoVerificacion == null}">No registrado</span>
+                    <a th:href="@{'/admin/verificaciones/' + ${u.id}}" class="btn btn-small btn-muted">Ver revisión</a>
+                    <p class="hint">La verificación solo se aprueba, rechaza o corrige desde la pantalla de revisión.
+                        Si cambias el rol de una persona a contador, su verificación queda pendiente.</p>
+                </div>
             </fieldset>
             <button type="submit">Guardar cambios</button>
         </form>

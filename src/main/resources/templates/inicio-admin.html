@@ -14,8 +14,8 @@
 
       <main class="content">
         <div class="stat-cards">
-          <div class="stat-card"><div class="stat-ico c-amber"><span th:replace="~{fragments/icons :: i('shield')}"></span></div><div><p class="stat-num" th:text="${#lists.size(contadoresPendientes)}">0</p><p class="stat-lbl">Contadores por verificar</p></div></div>
-          <div class="stat-card"><div class="stat-ico c-red"><span th:replace="~{fragments/icons :: i('alert')}"></span></div><div><p class="stat-num" th:text="${#lists.size(disputas)}">0</p><p class="stat-lbl">Disputas abiertas</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-amber"><span th:replace="~{fragments/icons :: i('shield')}"></span></div><div><p class="stat-num" th:text="${verificacionesPendientes}">0</p><p class="stat-lbl">Contadores por verificar</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-red"><span th:replace="~{fragments/icons :: i('alert')}"></span></div><div><p class="stat-num" th:text="${#lists.size(disputas)}">0</p><p class="stat-lbl">Disputas activas</p></div></div>
           <div class="stat-card"><div class="stat-ico c-blue"><span th:replace="~{fragments/icons :: i('handshake')}"></span></div><div><p class="stat-num" th:text="${#lists.size(acuerdos)}">0</p><p class="stat-lbl">Acuerdos</p></div></div>
           <div class="stat-card"><div class="stat-ico c-green"><span th:replace="~{fragments/icons :: i('dollar')}"></span></div><div><p class="stat-num" th:text="${'$ ' + totalComisiones}">0</p><p class="stat-lbl">Comisiones</p></div></div>
         </div>
@@ -24,42 +24,34 @@
         <div class="list">
           <div class="list-item" th:each="u : ${contadoresPendientes}">
             <span th:text="${u.nombre}">Nombre</span>
-            <span class="tag" th:text="${u.rol}">Rol</span>
-            <span th:text="${u.tarjetaProfesional}">Tarjeta</span>
-            <form
-              th:action="@{'/admin/usuarios/' + ${u.id} + '/verificar'}"
-              method="post"
-              data-confirm="¿Verificar a este contador?"
-            >
-              <button type="submit" class="btn-small">Verificar</button>
-            </form>
+            <span class="tag" th:text="${u.rol.etiqueta}">Rol</span>
+            <span th:text="${u.tarjetaProfesional != null ? 'TP ' + u.tarjetaProfesional : 'TP no registrada'}">Tarjeta</span>
+            <span th:class="${'badge badge-' + #strings.toLowerCase(u.estadoVerificacion.name())}"
+                  th:text="${u.estadoVerificacion.etiqueta}">Pendiente</span>
+            <span class="list-meta"
+                  th:text="${u.fechaSolicitudVerificacion != null ? 'Solicitud: ' + #temporals.format(u.fechaSolicitudVerificacion, 'dd/MM/yyyy') : 'Solicitud: No registrado'}">Fecha</span>
+            <a th:href="@{'/admin/verificaciones/' + ${u.id}}" class="btn btn-small list-accion">Revisar</a>
           </div>
           <p th:if="${contadoresPendientes.isEmpty()}" class="empty">
             No hay contadores pendientes.
           </p>
         </div>
 
-        <h2>Disputas abiertas</h2>
+        <div class="content-header seccion-con-enlace">
+          <h2>Disputas activas</h2>
+          <a th:href="@{/admin/disputas/cerradas}" class="btn btn-small btn-muted">Disputas cerradas</a>
+        </div>
         <div class="list">
           <div class="list-item" th:each="d : ${disputas}">
+            <span th:text="${'Disputa #' + d.id}">Disputa</span>
             <span th:text="${'Acuerdo #' + d.acuerdo.id}">Acuerdo</span>
+            <span th:class="${'badge badge-' + #strings.toLowerCase(d.estado.name())}" th:text="${d.estado}">Estado</span>
             <span th:text="${d.abiertaPor.nombre}">Quien abrio</span>
-            <span th:text="${d.motivo}">Motivo</span>
-            <a
-              th:href="@{'/acuerdos/' + ${d.acuerdo.id} + '/chat'}"
-              class="btn btn-small btn-muted"
-              >Ver chat</a
-            >
-            <form
-              th:action="@{'/admin/disputas/' + ${d.id} + '/resolver'}"
-              method="post"
-              data-confirm="¿Marcar la disputa como resuelta?"
-            >
-              <button type="submit" class="btn-small">Resolver</button>
-            </form>
+            <span class="list-meta" th:text="${d.motivo}">Motivo</span>
+            <a th:href="@{'/admin/disputas/' + ${d.id}}" class="btn btn-small list-accion">Revisar disputa</a>
           </div>
           <p th:if="${disputas.isEmpty()}" class="empty">
-            No hay disputas abiertas.
+            No hay disputas activas.
           </p>
         </div>
 

@@ -1,0 +1,76 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Calificaciones</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('calificaciones')}"></aside>
+
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <h2>Calificaciones</h2>
+            <p class="page-lead">Calificaciones con comentario. Ocultar un comentario no lo borra: deja de mostrarse y de contar en el promedio.</p>
+          </div>
+        </div>
+
+        <p class="success" th:if="${param.ocultada}">Comentario ocultado.</p>
+        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+
+        <div class="tabla-wrap">
+          <table class="tabla">
+            <thead><tr><th>Fecha</th><th>Contador</th><th>Cliente</th><th>Puntaje</th><th>Comentario</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr th:each="c : ${calificaciones}">
+                <td th:text="${#temporals.format(c.fecha, 'dd/MM/yyyy')}">fecha</td>
+                <td><a th:href="@{'/contadores/' + ${c.contador.id}}" th:text="${c.contador.nombre}">Contador</a></td>
+                <td th:text="${c.persona.nombre}">Cliente</td>
+                <td class="estrellas" th:text="${#strings.repeat('★', c.puntaje)}">★★★</td>
+                <td class="celda-detalle" th:text="${c.comentario}">Comentario</td>
+                <td>
+                  <span th:if="${c.oculta}" class="badge badge-cerrada">Oculta</span>
+                  <small th:if="${c.oculta}" class="list-meta" th:text="${' ' + c.motivoOcultamiento}"></small>
+                  <span th:unless="${c.oculta}" class="badge badge-aprobado">Visible</span>
+                </td>
+                <td class="acciones">
+                  <button type="button" class="btn-small btn-danger" th:unless="${c.oculta}" data-abrir-modal="modal-ocultar"
+                          th:data-accion="@{'/admin/calificaciones/' + ${c.id} + '/ocultar'}"
+                          th:data-doc="${c.contador.nombre + ' (' + c.puntaje + '/5)'}">Ocultar comentario</button>
+                </td>
+              </tr>
+              <tr th:if="${calificaciones.isEmpty()}">
+                <td colspan="7" class="empty-celda">Todavía no hay calificaciones con comentario.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <dialog th:replace="~{fragments/modal :: modal('modal-ocultar', 'Ocultar comentario', ~{::#form-ocultar})}">
+      <form id="form-ocultar" th:action="@{/admin/calificaciones}" method="post">
+        <div class="modal-cuerpo">
+          <p>Vas a ocultar el comentario de la calificación a <strong data-modal-doc>contador</strong>. No se borra: queda registrada con el motivo y deja de contar en el promedio.</p>
+          <label for="ocultar-motivo">Motivo (obligatorio)</label>
+          <textarea id="ocultar-motivo" name="motivo" rows="3" required th:maxlength="${motivoMax}"></textarea>
+          <label class="check-item modal-confirmacion">
+            <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+            <span>Confirmo que este comentario incumple las normas de la plataforma</span>
+          </label>
+        </div>
+        <div class="modal-pie">
+          <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+          <button type="submit" class="btn-danger" data-confirmar disabled>Ocultar comentario</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

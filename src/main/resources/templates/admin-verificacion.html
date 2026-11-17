@@ -1,0 +1,164 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Revisar verificación</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('inicio')}"></aside>
+
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <h2>Revisión de verificación</h2>
+            <p class="page-lead" th:text="${c.nombre}">Nombre del contador</p>
+          </div>
+          <span th:if="${c.estadoVerificacion != null}"
+                th:class="${'badge badge-' + #strings.toLowerCase(c.estadoVerificacion.name())}"
+                th:text="${c.estadoVerificacion.etiqueta}">Pendiente</span>
+        </div>
+
+        <p class="success" th:if="${param.aprobado}">Verificación aprobada. El contador ya puede enviar ofertas y fue notificado.</p>
+        <p class="success" th:if="${param.rechazado}">Verificación rechazada. Se notificó al contador con el motivo.</p>
+        <p class="success" th:if="${param.correccion}">Corrección solicitada. El contador fue notificado y podrá subir un nuevo soporte.</p>
+        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+
+        <ol class="pasos-revision" aria-label="Pasos de la revisión">
+          <li>Ver datos</li><li>Revisar documentos</li><li>Decidir</li><li>Confirmar</li><li>Registrar</li>
+        </ol>
+
+        <section class="detalle-bloque">
+          <h3>Datos del contador</h3>
+          <dl class="ficha">
+            <dt>Nombre</dt><dd th:text="${c.nombre}">-</dd>
+            <dt>Correo</dt><dd th:text="${c.email}">-</dd>
+            <dt>Rol</dt><dd th:text="${c.rol.etiqueta}">-</dd>
+            <dt>Número de tarjeta profesional</dt>
+            <dd th:text="${c.tarjetaProfesional != null ? c.tarjetaProfesional : 'No registrado'}">-</dd>
+            <th:block th:if="${c.rol.name() == 'CONTADOR_PRACTICANTE'}">
+              <dt>Mentor</dt>
+              <dd th:text="${c.mentor != null ? c.mentor.nombre + ' (' + c.mentor.email + ')' : 'Sin mentor asignado'}">-</dd>
+            </th:block>
+            <dt>Estado actual</dt>
+            <dd th:text="${c.estadoVerificacion != null ? c.estadoVerificacion.etiqueta : 'No registrado'}">-</dd>
+            <dt>Fecha de solicitud</dt>
+            <dd th:text="${c.fechaSolicitudVerificacion != null ? #temporals.format(c.fechaSolicitudVerificacion, 'dd/MM/yyyy HH:mm') : 'No registrado'}">-</dd>
+            <dt>Observación previa</dt>
+            <dd th:text="${c.observacionVerificacion != null ? c.observacionVerificacion : 'No registrado'}">-</dd>
+            <dt>Motivo de rechazo previo</dt>
+            <dd th:text="${c.motivoRechazo != null ? c.motivoRechazo : 'No registrado'}">-</dd>
+            <dt>Revisado por</dt>
+            <dd th:text="${c.revisadoPor != null ? c.revisadoPor.nombre : 'No registrado'}">-</dd>
+            <dt>Fecha de revisión</dt>
+            <dd th:text="${c.fechaRevisionVerificacion != null ? #temporals.format(c.fechaRevisionVerificacion, 'dd/MM/yyyy HH:mm') : 'No registrado'}">-</dd>
+          </dl>
+        </section>
+
+        <section class="detalle-bloque">
+          <h3>Documentos</h3>
+          <div class="documentos">
+            <div class="documento-item">
+              <span class="detalle-etiqueta">Soporte de la tarjeta profesional</span>
+              <a th:if="${c.soporteTarjetaProfesional != null}" th:href="@{'/admin/verificaciones/' + ${c.id} + '/documentos/tarjeta'}"
+                 target="_blank" rel="noopener" class="btn btn-small">Ver soporte de TP</a>
+              <span th:unless="${c.soporteTarjetaProfesional != null}" class="empty-inline">No adjuntado</span>
+            </div>
+            <div class="documento-item">
+              <span class="detalle-etiqueta">Documento de identidad</span>
+              <a th:if="${c.soporteDocumentoIdentidad != null}" th:href="@{'/admin/verificaciones/' + ${c.id} + '/documentos/identidad'}"
+                 target="_blank" rel="noopener" class="btn btn-small btn-muted">Ver documento de identidad</a>
+              <span th:unless="${c.soporteDocumentoIdentidad != null}" class="empty-inline">No adjuntado</span>
+            </div>
+          </div>
+          <div class="banner-warning" th:if="${pendiente and c.soporteTarjetaProfesional == null}">
+            Este contador no ha adjuntado el soporte de su tarjeta profesional, por lo que no se puede aprobar.
+            Solicita una corrección para que lo suba desde su perfil.
+          </div>
+        </section>
+
+        <section class="detalle-bloque" th:if="${pendiente}">
+          <h3>Decisión</h3>
+          <p class="hint">Revisa los datos y los documentos antes de decidir. Cada acción pide una confirmación y queda registrada con tu nombre y la fecha.</p>
+          <div class="row-actions">
+            <button type="button" data-abrir-modal="modal-aprobar" th:disabled="${c.soporteTarjetaProfesional == null}">Aprobar verificación</button>
+            <button type="button" class="btn-danger" data-abrir-modal="modal-rechazar">Rechazar verificación</button>
+            <button type="button" class="btn-muted" data-abrir-modal="modal-correccion">Solicitar corrección o nuevo documento</button>
+          </div>
+        </section>
+        <div class="banner-warning" th:unless="${pendiente}">
+          Esta solicitud no está pendiente, así que no admite decisiones. Si el contador envía un nuevo soporte, volverá a quedar pendiente.
+        </div>
+
+        <p class="link-secondary"><a th:href="@{/admin/inicio}">&larr; Volver al panel</a></p>
+      </main>
+    </div>
+
+    <th:block th:if="${pendiente}">
+      <!-- Aprobar -->
+      <dialog th:replace="~{fragments/modal :: modal('modal-aprobar', 'Aprobar verificación', ~{::#form-aprobar})}">
+        <form id="form-aprobar" th:action="@{'/admin/verificaciones/' + ${c.id} + '/aprobar'}" method="post">
+          <div class="modal-cuerpo">
+            <p>Vas a aprobar a <strong th:text="${c.nombre}">Nombre</strong>. Su estado pasará de <strong>Pendiente</strong> a <strong>Aprobado</strong> y podrá enviar ofertas.</p>
+            <label for="aprobar-observacion">Observación (opcional)</label>
+            <textarea id="aprobar-observacion" name="observacion" rows="3" th:maxlength="${textoMax}"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que revisé la tarjeta profesional y los documentos</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Confirmar aprobación</button>
+          </div>
+        </form>
+      </dialog>
+
+      <!-- Rechazar -->
+      <dialog th:replace="~{fragments/modal :: modal('modal-rechazar', 'Rechazar verificación', ~{::#form-rechazar})}">
+        <form id="form-rechazar" th:action="@{'/admin/verificaciones/' + ${c.id} + '/rechazar'}" method="post">
+          <div class="modal-cuerpo">
+            <p>El estado pasará de <strong>Pendiente</strong> a <strong>Rechazado</strong>. El contador verá el motivo y podrá enviar un nuevo soporte.</p>
+            <label for="rechazar-motivo" th:text="${'Motivo del rechazo (obligatorio, ' + motivoMin + ' a ' + textoMax + ' caracteres)'}">Motivo</label>
+            <textarea id="rechazar-motivo" name="motivo" rows="3" required th:minlength="${motivoMin}" th:maxlength="${textoMax}"></textarea>
+            <label for="rechazar-observacion">Observación (opcional)</label>
+            <textarea id="rechazar-observacion" name="observacion" rows="2" th:maxlength="${textoMax}"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que revisé la tarjeta profesional y los documentos</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" class="btn-danger" data-confirmar disabled>Confirmar rechazo</button>
+          </div>
+        </form>
+      </dialog>
+
+      <!-- Solicitar correccion -->
+      <dialog th:replace="~{fragments/modal :: modal('modal-correccion', 'Solicitar corrección o nuevo documento', ~{::#form-correccion})}">
+        <form id="form-correccion" th:action="@{'/admin/verificaciones/' + ${c.id} + '/correccion'}" method="post">
+          <div class="modal-cuerpo">
+            <p>El estado pasará de <strong>Pendiente</strong> a <strong>Corrección solicitada</strong>. El contador verá tu observación en su panel y podrá subir un nuevo soporte.</p>
+            <label for="correccion-observacion">¿Qué debe corregir? (obligatorio)</label>
+            <textarea id="correccion-observacion" name="observacion" rows="3" required th:maxlength="${textoMax}"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que revisé la tarjeta profesional y los documentos</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Solicitar corrección</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

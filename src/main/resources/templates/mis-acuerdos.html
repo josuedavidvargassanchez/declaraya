@@ -32,9 +32,13 @@
                 <div class="meta-row">
                     <span class="chip chip-dinero" th:text="${'$ ' + #numbers.formatDecimal(a.oferta.valorPropuesto, 1, 'POINT', 0, 'COMMA')}">Valor</span>
                     <span class="chip" th:text="${'Acuerdo #' + a.id}">Acuerdo</span>
+                    <span class="chip chip-suave" th:text="${'Etapa: ' + (a.etapa != null ? a.etapa.etiqueta : 'No registrada')}">Etapa</span>
+                    <span class="chip chip-suave"
+                          th:text="${'Entrega estimada: ' + (a.fechaEntregaEstimada != null ? #temporals.format(a.fechaEntregaEstimada, 'dd/MM/yyyy') : 'No registrada')}">Entrega</span>
                 </div>
                 <div class="row-actions">
-                    <a th:href="@{'/acuerdos/' + ${a.id} + '/chat'}" class="btn btn-small">Abrir chat</a>
+                    <a th:href="@{'/acuerdos/' + ${a.id}}" class="btn btn-small">Ver detalle</a>
+                    <a th:href="@{'/acuerdos/' + ${a.id} + '/chat'}" class="btn btn-small btn-muted">Abrir chat</a>
                     <a th:href="@{'/acuerdos/' + ${a.id} + '/documento'}" class="btn btn-small btn-muted">Ver documento</a>
                 </div>
             </div>

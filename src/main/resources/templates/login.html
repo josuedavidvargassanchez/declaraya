@@ -34,6 +34,7 @@
     </div>
     <div th:if="${param.registrado}" class="alert alert-success" role="alert">
         Cuenta creada. Ya puedes iniciar sesión.
+        <span th:if="${param.verificacion}">Tus documentos quedaron en revisión: podrás ofertar cuando el administrador apruebe tu verificación.</span>
     </div>
     <div th:if="${exito}" class="alert alert-success" role="alert">
         <span th:text="${exito}"></span>

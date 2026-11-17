@@ -23,6 +23,7 @@
 
         <p class="error" th:if="${param.errorValor}">El valor propuesto debe ser mayor que cero.</p>
         <p class="error" th:if="${param.errorMensaje}">Escribe un mensaje (máximo 500 caracteres).</p>
+        <p class="error" th:if="${param.errorFecha}">Indica una fecha estimada de entrega futura y de máximo 120 días.</p>
 
         <form th:action="@{'/ofertas/' + ${oferta.id} + '/editar'}" method="post" class="auth-form form-pro">
             <fieldset class="form-section">
@@ -31,6 +32,12 @@
 
                 <label for="valorPropuesto">Valor propuesto (COP)</label>
                 <input type="number" id="valorPropuesto" name="valorPropuesto" min="1" step="1000" required th:value="${oferta.valorPropuesto != null ? oferta.valorPropuesto.toBigInteger() : ''}">
+
+                <label for="fechaEntregaEstimada">Fecha estimada de entrega (máximo 120 días)</label>
+                <input type="date" id="fechaEntregaEstimada" name="fechaEntregaEstimada" required
+                       th:value="${oferta.fechaEntregaEstimada != null ? #temporals.format(oferta.fechaEntregaEstimada, 'yyyy-MM-dd') : ''}"
+                       th:min="${#temporals.format(#temporals.createToday().plusDays(1), 'yyyy-MM-dd')}"
+                       th:max="${#temporals.format(#temporals.createToday().plusDays(120), 'yyyy-MM-dd')}">
             </fieldset>
             <button type="submit">Guardar cambios</button>
         </form>

@@ -9,6 +9,7 @@ import com.example.declaraya.models.Oferta;
 import com.example.declaraya.models.SolicitudDeclaracion;
 import com.example.declaraya.models.Usuario;
 import com.example.declaraya.services.AcuerdoService;
+import com.example.declaraya.services.FlujoAcuerdoService;
 import com.example.declaraya.services.NotificacionService;
 import com.example.declaraya.services.OfertaService;
 import com.example.declaraya.services.SolicitudDeclaracionService;
@@ -48,6 +49,9 @@ public class OfertaController {
 
     @Autowired
     private NotificacionService notificacionService;
+
+    @Autowired
+    private FlujoAcuerdoService flujoService;
 
     private Usuario usuarioActual(Authentication authentication) {
         return usuarioService.buscarPorEmail(authentication.getName())
@@ -96,6 +100,7 @@ public class OfertaController {
         resumenOfertas(model, ofertasContador);
         model.addAttribute("practicantes", usuarioService.listarPracticantesDe(contador));
         model.addAttribute("practicantesSupervisados", supervisionService.listarPorMentor(contador));
+        model.addAttribute("entregasPorRevisar", flujoService.entregasPorRevisar(contador));
         return "inicio-contador";
     }
 
@@ -142,6 +147,9 @@ public class OfertaController {
         if (dto.getValorPropuesto() == null || dto.getValorPropuesto().signum() <= 0) {
             return "redirect:" + inicio + "?errorValor";
         }
+        if (!OfertaService.fechaEntregaValida(dto.getFechaEntregaEstimada())) {
+            return "redirect:" + inicio + "?errorFecha";
+        }
         boolean yaOferto = ofertaService.listarPorSolicitud(solicitud).stream()
                 .anyMatch(o -> o.getContador().getId().equals(contador.getId()) && o.getEstado() != EstadoOferta.RETIRADA);
         if (yaOferto) {
@@ -156,7 +164,7 @@ public class OfertaController {
             }
         }
 
-        ofertaService.crear(solicitud, contador, dto.getMensaje(), dto.getValorPropuesto());
+        ofertaService.crear(solicitud, contador, dto.getMensaje(), dto.getValorPropuesto(), dto.getFechaEntregaEstimada());
         notificacionService.notificar(solicitud.getPersona(),
                 "Nueva oferta de " + contador.getNombre() + " para \"" + solicitud.getTitulo() + "\"",
                 "/solicitudes/" + solicitud.getId());
@@ -188,9 +196,15 @@ public class OfertaController {
         Usuario contador = oferta.getContador();
         notificacionService.notificar(contador,
                 "¡Tu oferta para \"" + solicitud.getTitulo() + "\" fue aceptada! Ya puedes chatear con el cliente",
-                "/acuerdos/" + acuerdo.getId() + "/chat");
+                "/acuerdos/" + acuerdo.getId());
+        notificacionService.notificar(solicitud.getPersona(),
+                "Se creó el acuerdo #" + acuerdo.getId() + " con " + contador.getNombre() + " para \"" + solicitud.getTitulo() + "\"",
+                "/acuerdos/" + acuerdo.getId());
         if (contador.getRol() == Rol.CONTADOR_PRACTICANTE && contador.getMentor() != null) {
             supervisionService.asignar(contador, contador.getMentor(), acuerdo);
+            notificacionService.notificar(contador.getMentor(),
+                    "Tu practicante " + contador.getNombre() + " tiene un caso nuevo por aprobar",
+                    "/acuerdos/" + acuerdo.getId());
         }
         return "redirect:/solicitudes/" + solicitud.getId();
     }
@@ -235,7 +249,10 @@ public class OfertaController {
         if (mensaje.isEmpty() || mensaje.length() > 500) {
             return "redirect:/ofertas/" + id + "/editar?errorMensaje";
         }
-        ofertaService.editar(id, mensaje, dto.getValorPropuesto());
+        if (!OfertaService.fechaEntregaValida(dto.getFechaEntregaEstimada())) {
+            return "redirect:/ofertas/" + id + "/editar?errorFecha";
+        }
+        ofertaService.editar(id, mensaje, dto.getValorPropuesto(), dto.getFechaEntregaEstimada());
         notificacionService.notificar(oferta.getSolicitud().getPersona(),
                 contador.getNombre() + " actualizó su oferta para \"" + oferta.getSolicitud().getTitulo() + "\"",
                 "/solicitudes/" + oferta.getSolicitud().getId());
