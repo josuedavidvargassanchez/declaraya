@@ -22,7 +22,6 @@
         <p class="success" th:if="${param.creado}">Usuario creado correctamente.</p>
         <p class="success" th:if="${param.actualizado}">Usuario actualizado.</p>
         <p class="success" th:if="${param.eliminado}">Usuario eliminado.</p>
-        <p class="success" th:if="${param.verificado}">Contador verificado.</p>
         <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
 
         <details class="panel-plegable" open>
@@ -44,13 +43,9 @@
                     <div><label for="tarifaBase">Tarifa base (COP)</label><input type="number" id="tarifaBase" name="tarifaBase" min="0" step="1000" placeholder="500000"></div>
                 </div>
                 <div class="form-row">
-                    <div><label for="mentorId">Mentor (solo practicantes)</label>
-                        <select id="mentorId" name="mentorId">
-                            <option value="">Sin mentor</option>
-                            <option th:each="m : ${mentores}" th:value="${m.id}" th:text="${m.nombre}"></option>
-                        </select></div>
                     <label class="check-item check-solo"><input type="checkbox" name="verificado" value="true" checked> <span>Contador verificado (puede ofertar)</span></label>
                 </div>
+                <p class="hint">El mentor de un practicante se asigna después, desde Gestión de mentorías.</p>
                 <button type="submit">Crear usuario</button>
             </form>
         </details>
@@ -65,19 +60,18 @@
                     <td><span class="chip" th:text="${u.rol.etiqueta}">Rol</span></td>
                     <td th:text="${u.tarjetaProfesional != null ? u.tarjetaProfesional : '—'}">TP</td>
                     <td>
-                        <span th:if="${u.rol.name() == 'CONTADOR_PUBLICO' or u.rol.name() == 'CONTADOR_PRACTICANTE'}"
-                              th:class="${u.verificado ? 'badge badge-aceptada' : 'badge badge-pendiente'}"
-                              th:text="${u.verificado ? 'Verificado' : 'Pendiente'}">Estado</span>
-                        <span th:unless="${u.rol.name() == 'CONTADOR_PUBLICO' or u.rol.name() == 'CONTADOR_PRACTICANTE'}">—</span>
+                        <span th:if="${u.contador and u.estadoVerificacion != null}"
+                              th:class="${'badge badge-' + #strings.toLowerCase(u.estadoVerificacion.name())}"
+                              th:text="${u.estadoVerificacion.etiqueta}">Estado</span>
+                        <span th:if="${u.contador and u.estadoVerificacion == null}">No registrado</span>
+                        <span th:unless="${u.contador}">—</span>
                     </td>
                     <td th:text="${u.mentor != null ? u.mentor.nombre : '—'}">Mentor</td>
                     <td class="acciones">
                         <a th:href="@{'/admin/usuarios/' + ${u.id} + '/editar'}" class="btn btn-small btn-muted">Editar</a>
-                        <form th:if="${!u.verificado and (u.rol.name() == 'CONTADOR_PUBLICO' or u.rol.name() == 'CONTADOR_PRACTICANTE')}"
-                              th:action="@{'/admin/usuarios/' + ${u.id} + '/verificar'}" method="post" class="form-inline">
-                            <input type="hidden" name="volver" value="usuarios">
-                            <button type="submit" class="btn-small">Verificar</button>
-                        </form>
+                        <a th:if="${u.contador}" th:href="@{'/admin/verificaciones/' + ${u.id}}"
+                           th:class="${u.estadoVerificacion != null and u.estadoVerificacion.name() == 'PENDIENTE'} ? 'btn btn-small' : 'btn btn-small btn-muted'"
+                           th:text="${u.estadoVerificacion != null and u.estadoVerificacion.name() == 'PENDIENTE'} ? 'Revisar' : 'Verificación'">Revisar</a>
                         <form th:action="@{'/admin/usuarios/' + ${u.id} + '/eliminar'}" method="post" class="form-inline"
                               data-confirm="¿Eliminar este usuario?">
                             <button type="submit" class="btn-small btn-danger">Eliminar</button>

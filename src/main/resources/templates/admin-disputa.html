@@ -1,0 +1,242 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Revisar disputa</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout"
+         th:with="acuerdo=${d.acuerdo}, oferta=${d.acuerdo.oferta}, solicitud=${d.acuerdo.oferta.solicitud},
+                  cliente=${d.acuerdo.oferta.solicitud.persona}, contador=${d.acuerdo.oferta.contador}">
+      <aside th:replace="~{fragments/sidebar :: sidebar('inicio')}"></aside>
+
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <h2 th:text="${'Disputa #' + d.id}">Disputa #1</h2>
+            <p class="page-lead" th:text="${'Acuerdo #' + acuerdo.id + ' · ' + solicitud.titulo}">Acuerdo</p>
+          </div>
+          <span th:class="${'badge badge-' + #strings.toLowerCase(d.estado.name())}" th:text="${d.estado}">ABIERTA</span>
+        </div>
+
+        <p class="success" th:if="${param.mensajeEnviado}">Mensaje enviado al chat del acuerdo y registrado en el historial.</p>
+        <p class="success" th:if="${param.resuelta}">Resolución registrada. Se notificó al cliente y al contador.</p>
+        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+
+        <ol class="pasos-revision" aria-label="Pasos de la revisión" th:if="${d.activa}">
+          <li>Ver</li><li>Revisar</li><li>Decidir</li><li>Confirmar</li><li>Registrar</li>
+        </ol>
+
+        <!-- Decision ya tomada: la disputa queda en solo lectura -->
+        <section class="detalle-bloque resolucion-final" th:unless="${d.activa}">
+          <h3>Decisión registrada</h3>
+          <dl class="ficha">
+            <dt>Decisión</dt><dd th:text="${d.resultado != null ? d.resultado.etiqueta : 'No registrado'}">-</dd>
+            <dt>Justificación</dt><dd th:text="${d.justificacion != null ? d.justificacion : 'No registrado'}">-</dd>
+            <dt>Resuelta por</dt><dd th:text="${d.resueltaPor != null ? d.resueltaPor.nombre : 'No registrado'}">-</dd>
+            <dt>Fecha de resolución</dt>
+            <dd th:text="${d.fechaResolucion != null ? #temporals.format(d.fechaResolucion, 'dd/MM/yyyy HH:mm') : 'No registrado'}">-</dd>
+          </dl>
+          <p class="hint">Esta disputa está cerrada y se muestra en solo lectura. Según la política de datos, el administrador solo accede
+            a la conversación y a las evidencias mientras la disputa está activa.</p>
+        </section>
+
+        <div class="detalle-grid">
+          <section class="detalle-bloque">
+            <h3>Resumen</h3>
+            <dl class="ficha">
+              <dt>Número</dt><dd th:text="${'#' + d.id}">-</dd>
+              <dt>Estado</dt><dd th:text="${d.estado}">-</dd>
+              <dt>Fecha de apertura</dt>
+              <dd th:text="${d.fechaCreacion != null ? #temporals.format(d.fechaCreacion, 'dd/MM/yyyy HH:mm') : 'No registrado'}">-</dd>
+              <dt>Abierta por</dt>
+              <dd th:text="${d.abiertaPor.nombre + (d.abiertaPor.id == cliente.id ? ' (cliente)' : (d.abiertaPor.id == contador.id ? ' (contador)' : ''))}">-</dd>
+              <dt>Motivo</dt><dd th:text="${d.motivo != null ? d.motivo : 'No registrado'}">-</dd>
+            </dl>
+          </section>
+
+          <section class="detalle-bloque">
+            <h3>Partes</h3>
+            <dl class="ficha">
+              <dt>Cliente</dt><dd th:text="${cliente.nombre}">-</dd>
+              <dt>Correo del cliente</dt><dd th:text="${cliente.email}">-</dd>
+              <dt>Contador</dt><dd th:text="${contador.nombre}">-</dd>
+              <dt>Rol</dt><dd th:text="${contador.rol.etiqueta}">-</dd>
+              <dt>Tarjeta profesional</dt>
+              <dd th:text="${contador.tarjetaProfesional != null ? contador.tarjetaProfesional : 'No registrado'}">-</dd>
+            </dl>
+          </section>
+        </div>
+
+        <section class="detalle-bloque">
+          <h3>Acuerdo</h3>
+          <dl class="ficha">
+            <dt>Número</dt><dd th:text="${'#' + acuerdo.id}">-</dd>
+            <dt>Estado</dt><dd th:text="${acuerdo.estado}">-</dd>
+            <dt>Servicio contratado</dt><dd th:text="${solicitud.titulo}">-</dd>
+            <dt>Año gravable</dt><dd th:text="${solicitud.anioGravable != null ? solicitud.anioGravable : 'No registrado'}">-</dd>
+            <dt>Urgencia</dt><dd th:text="${solicitud.urgencia != null ? solicitud.urgencia : 'No registrado'}">-</dd>
+            <dt>Valor acordado</dt>
+            <dd th:text="${oferta.valorPropuesto != null ? '$ ' + #numbers.formatDecimal(oferta.valorPropuesto, 1, 'POINT', 0, 'COMMA') : 'No registrado'}">-</dd>
+            <dt>Comisión de la plataforma</dt>
+            <dd th:text="${acuerdo.comisionPlataforma != null ? '$ ' + #numbers.formatDecimal(acuerdo.comisionPlataforma, 1, 'POINT', 0, 'COMMA') : 'No registrado'}">-</dd>
+            <dt>Fecha de inicio</dt>
+            <dd th:text="${acuerdo.fechaCreacion != null ? #temporals.format(acuerdo.fechaCreacion, 'dd/MM/yyyy') : 'No registrado'}">-</dd>
+            <dt>Fecha límite (entrega estimada)</dt>
+            <dd>
+              <span th:text="${oferta.fechaEntregaEstimada != null ? #temporals.format(oferta.fechaEntregaEstimada, 'dd/MM/yyyy') : 'No registrada'}">fecha</span>
+              <span class="hint-inline" th:if="${solicitud.urgencia != null}" th:text="${'(urgencia de la solicitud: ' + solicitud.urgencia + ')'}"></span>
+            </dd>
+            <dt>Etapa</dt><dd th:text="${acuerdo.etapa != null ? acuerdo.etapa.etiqueta : 'No registrada'}">-</dd>
+          </dl>
+        </section>
+
+        <th:block th:if="${d.activa}">
+          <section class="detalle-bloque">
+            <h3>Conversación</h3>
+            <p class="hint">Solo lectura. Los mensajes de la administración aparecen resaltados.</p>
+            <div class="chat-box chat-lectura">
+              <div class="chat-message" th:each="m : ${mensajes}"
+                   th:classappend="${m.remitente.rol.name() == 'ADMIN'} ? 'chat-message-admin'">
+                <strong th:text="${m.remitente.nombre}">Remitente</strong>
+                <small class="chat-fecha" th:text="${m.fechaEnvio != null ? #temporals.format(m.fechaEnvio, 'dd/MM/yyyy HH:mm') : ''}">fecha</small>
+                <p th:text="${m.contenido}">Contenido</p>
+                <div th:each="a : ${archivosPorMensaje[m.id]}">
+                  <a th:href="@{'/archivos/' + ${a.id}}" th:text="${a.nombreArchivo}">archivo.pdf</a>
+                </div>
+              </div>
+              <p th:if="${mensajes.isEmpty()}" class="empty">Aún no hay mensajes en este chat.</p>
+            </div>
+          </section>
+
+          <section class="detalle-bloque">
+            <h3>Evidencias</h3>
+            <div class="list">
+              <div class="list-item" th:each="a : ${evidencias}">
+                <a th:href="@{'/archivos/' + ${a.id}}" th:text="${a.nombreArchivo}">archivo.pdf</a>
+                <span class="list-meta" th:text="${'Enviado por ' + a.mensaje.remitente.nombre}">Remitente</span>
+                <span class="list-meta" th:text="${a.fechaSubida != null ? #temporals.format(a.fechaSubida, 'dd/MM/yyyy HH:mm') : 'No registrado'}">Fecha</span>
+              </div>
+              <p th:if="${evidencias.isEmpty()}" class="empty">No hay archivos adjuntos en el chat.</p>
+            </div>
+            <p class="detalle-etiqueta">Documentos del cliente vinculados a la solicitud</p>
+            <div class="list">
+              <div class="list-item" th:each="doc : ${documentosCliente}">
+                <a th:href="@{'/documentos/' + ${doc.id}}" target="_blank" rel="noopener" th:text="${doc.nombre}">documento</a>
+                <span class="list-meta" th:text="${doc.tipo.etiqueta}">Tipo</span>
+                <span class="list-meta" th:text="${#temporals.format(doc.fechaCarga, 'dd/MM/yyyy HH:mm')}">Fecha</span>
+              </div>
+              <p th:if="${documentosCliente.isEmpty()}" class="empty">El cliente no vinculó documentos a esta solicitud.</p>
+            </div>
+          </section>
+        </th:block>
+
+        <section class="detalle-bloque">
+          <h3>Historial</h3>
+          <div class="tabla-wrap">
+            <table class="tabla">
+              <thead>
+                <tr><th>Fecha y hora</th><th>Actor</th><th>Acción</th><th>Estado anterior</th><th>Estado nuevo</th><th>Decisión</th><th>Detalle</th></tr>
+              </thead>
+              <tbody>
+                <tr th:each="h : ${historial}">
+                  <td th:text="${#temporals.format(h.fecha, 'dd/MM/yyyy HH:mm')}">fecha</td>
+                  <td th:text="${h.actor != null ? h.actor.nombre : 'Sistema'}">actor</td>
+                  <td th:text="${h.accion.etiqueta}">accion</td>
+                  <td th:text="${h.estadoAnterior != null ? h.estadoAnterior : '—'}">-</td>
+                  <td th:text="${h.estadoNuevo != null ? h.estadoNuevo : '—'}">-</td>
+                  <td th:text="${h.decision != null ? h.decision.etiqueta : '—'}">-</td>
+                  <td class="celda-detalle" th:text="${h.detalle != null ? h.detalle : '—'}">-</td>
+                </tr>
+                <tr th:if="${historial.isEmpty()}">
+                  <td colspan="7" class="empty-celda">No hay registros en el historial (disputa anterior a este registro).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <th:block th:if="${d.activa}">
+          <section class="detalle-bloque">
+            <h3>Mensajes y solicitudes de información</h3>
+            <p class="hint">El mensaje se publica en el chat del acuerdo para que la parte responda ahí mismo, se le notifica y queda en el historial.
+              <span th:if="${d.estado.name() == 'ABIERTA'}">Al enviarlo, la disputa pasa a EN_REVISION.</span></p>
+            <form th:action="@{'/admin/disputas/' + ${d.id} + '/mensaje'}" method="post" class="auth-form form-pro">
+              <div class="form-row">
+                <div>
+                  <label for="destinatario">Destinatario</label>
+                  <select id="destinatario" name="destinatario" required>
+                    <option value="CLIENTE" th:text="${'Cliente (' + cliente.nombre + ')'}">Cliente</option>
+                    <option value="CONTADOR" th:text="${'Contador (' + contador.nombre + ')'}">Contador</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="tipo">Tipo</label>
+                  <select id="tipo" name="tipo" required>
+                    <option value="SOLICITUD_INFO">Solicitar información</option>
+                    <option value="MENSAJE">Mensaje</option>
+                  </select>
+                </div>
+              </div>
+              <label for="texto" th:text="${'Mensaje (máximo ' + mensajeMax + ' caracteres)'}">Mensaje</label>
+              <textarea id="texto" name="texto" rows="3" required th:maxlength="${mensajeMax}"></textarea>
+              <button type="submit">Enviar mensaje</button>
+            </form>
+          </section>
+
+          <section class="detalle-bloque">
+            <h3>Resolución</h3>
+            <p class="hint">Cuando hayas revisado la conversación y las evidencias, registra la decisión. Esta acción cierra la disputa y no se puede deshacer.</p>
+            <button type="button" data-abrir-modal="modal-resolver">Tomar decisión</button>
+          </section>
+        </th:block>
+
+        <p class="link-secondary">
+          <a th:href="@{/admin/inicio}">&larr; Volver al panel</a> ·
+          <a th:href="@{/admin/disputas/cerradas}">Disputas cerradas</a>
+        </p>
+      </main>
+    </div>
+
+    <th:block th:if="${d.activa}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-resolver', 'Resolución de disputa', ~{::#form-resolver})}">
+        <form id="form-resolver" th:action="@{'/admin/disputas/' + ${d.id} + '/resolver'}" method="post">
+          <div class="modal-cuerpo">
+            <label for="decision">Decisión</label>
+            <select id="decision" name="decision" required data-resumen>
+              <option value="" disabled selected>Elige una decisión</option>
+              <option th:each="r : ${resultados}" th:value="${r.name()}" th:text="${r.etiqueta}"
+                      th:attr="data-destino=${r.estadoFinal().name()}">Decisión</option>
+            </select>
+
+            <label for="justificacion" th:text="${'Justificación (obligatoria, ' + justificacionMin + ' a ' + justificacionMax + ' caracteres)'}">Justificación</label>
+            <textarea id="justificacion" name="justificacion" rows="4" required
+                      th:minlength="${justificacionMin}" th:maxlength="${justificacionMax}"></textarea>
+
+            <div class="modal-resumen">
+              <p>La disputa pasará de <strong th:text="${d.estado}">EN_REVISION</strong> a
+                <strong data-resumen-destino>RESUELTA o CERRADA</strong>.</p>
+              <p>Se notificará al cliente y al contador, y la decisión quedará en el historial.</p>
+              <p class="hint">La plataforma no maneja reembolsos: esta decisión no modifica el acuerdo ni ningún pago.</p>
+            </div>
+
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que revisé la conversación y las evidencias</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Confirmar resolución</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

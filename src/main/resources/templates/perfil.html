@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DeclaraYa - Mi perfil</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
@@ -9,39 +10,247 @@
 
 <div th:replace="~{fragments/menu :: menu('perfil')}"></div>
 
-<div class="layout">
+<div class="layout" th:with="esAdmin=${usuario.rol.name() == 'ADMIN'}, esContador=${usuario.contador}">
     <main class="content content-narrow">
         <h2>Mi perfil</h2>
         <p class="success" th:if="${param.fotoActualizada}">Foto actualizada correctamente.</p>
         <p class="success" th:if="${param.fotoEliminada}">Foto eliminada.</p>
         <p class="error" th:if="${param.errorFoto}">No se pudo guardar la foto. Usa una imagen JPG o PNG de maximo 2 MB.</p>
+        <p class="success" th:if="${param.datosActualizados}">Tus datos se guardaron correctamente.</p>
+        <p class="error" th:if="${errorDatos}">No se guardaron los cambios: revisa los campos marcados.</p>
+        <p class="success" th:if="${param.contrasenaActualizada}">Contraseña actualizada.</p>
+        <p class="error" th:if="${param.errorContrasena}" th:text="${param.errorContrasena}">Error</p>
+        <p class="success" th:if="${param.verificacionEnviada}">Soporte enviado. Tu solicitud volvió a quedar pendiente de revisión.</p>
+        <p class="success" th:if="${param.nuevaVerificacion}">Solicitud enviada. Tu cuenta quedó pendiente de verificación y el administrador fue notificado.</p>
+        <p class="error" th:if="${param.errorVerificacion}" th:text="${param.errorVerificacion}">Error</p>
 
-        <div class="perfil-card">
-            <img th:if="${usuario.fotoPerfil != null}" class="avatar avatar-grande"
-                 th:src="@{/usuarios/{id}/foto(id=${usuario.id},v=${usuario.fotoPerfil})}" alt="Foto de perfil">
-            <span th:unless="${usuario.fotoPerfil != null}" class="avatar avatar-inicial avatar-grande"
-                  th:text="${#strings.toUpperCase(#strings.substring(usuario.nombre, 0, 1))}">A</span>
-            <div>
-                <p class="card-title" th:text="${usuario.nombre}">Nombre</p>
-                <p class="card-subtitle" th:text="${usuario.email}">correo</p>
-                <span class="tag" th:text="${usuario.rol}">Rol</span>
+        <!-- ================= Informacion personal: foto ================= -->
+        <section class="detalle-bloque">
+            <h3>Información personal</h3>
+            <div class="perfil-card">
+                <img th:if="${usuario.fotoPerfil != null}" class="avatar avatar-grande"
+                     th:src="@{/usuarios/{id}/foto(id=${usuario.id},v=${usuario.fotoPerfil})}" alt="Foto de perfil">
+                <span th:unless="${usuario.fotoPerfil != null}" class="avatar avatar-inicial avatar-grande"
+                      th:text="${#strings.toUpperCase(#strings.substring(usuario.nombre, 0, 1))}">A</span>
+                <div>
+                    <p class="card-title" th:text="${usuario.nombre}">Nombre</p>
+                    <p class="card-subtitle" th:text="${usuario.email}">correo</p>
+                    <span class="tag" th:text="${usuario.rol.etiqueta}">Rol</span>
+                </div>
             </div>
-        </div>
 
-        <form th:action="@{/perfil/foto(_csrf=${_csrf.token})}" method="post" enctype="multipart/form-data" class="auth-form">
-            <label for="foto">Subir una nueva foto (JPG o PNG, maximo 2 MB)</label>
-            <input type="file" id="foto" name="foto" accept=".jpg,.jpeg,.png" required>
-            <button type="submit">Guardar foto</button>
+            <form th:action="@{/perfil/foto(_csrf=${_csrf.token})}" method="post" enctype="multipart/form-data" class="auth-form">
+                <label for="foto">Subir una nueva foto (JPG o PNG, maximo 2 MB)</label>
+                <input type="file" id="foto" name="foto" accept=".jpg,.jpeg,.png" required>
+                <button type="submit">Guardar foto</button>
+            </form>
+
+            <form th:if="${usuario.fotoPerfil != null}" th:action="@{/perfil/foto/eliminar}" method="post"
+                  class="row-actions" data-confirm="¿Eliminar tu foto de perfil?">
+                <button type="submit" class="btn-small btn-muted">Eliminar foto</button>
+            </form>
+        </section>
+
+        <!-- ================= Datos editables (POST /perfil/datos) ================= -->
+        <form th:action="@{/perfil/datos}" th:object="${perfil}" method="post" class="auth-form form-pro">
+            <fieldset class="form-section">
+                <legend>Datos personales</legend>
+                <label for="nombre">Nombre completo</label>
+                <input type="text" id="nombre" th:field="*{nombre}" required maxlength="100">
+                <p class="error" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}"></p>
+
+                <th:block th:if="${esAdmin}">
+                    <label>Correo</label>
+                    <p class="campo-lectura" th:text="${usuario.email}">correo</p>
+                </th:block>
+
+                <div class="form-row" th:unless="${esAdmin}">
+                    <div>
+                        <label for="tipoDocumento">Tipo de documento</label>
+                        <select id="tipoDocumento" th:field="*{tipoDocumento}">
+                            <option value="">Sin registrar</option>
+                            <option th:each="t : ${tiposDocumento}" th:value="${t.name()}" th:text="${t.etiqueta}">Tipo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="numeroDocumento">Número de documento</label>
+                        <input type="text" id="numeroDocumento" th:field="*{numeroDocumento}" maxlength="20">
+                        <p class="error" th:if="${#fields.hasErrors('numeroDocumento')}" th:errors="*{numeroDocumento}"></p>
+                    </div>
+                </div>
+                <p class="error" th:if="${#fields.hasErrors('documentoCompleto')}" th:errors="*{documentoCompleto}"></p>
+            </fieldset>
+
+            <fieldset class="form-section" th:unless="${esAdmin}">
+                <legend>Contacto</legend>
+                <label>Correo</label>
+                <p class="campo-lectura" th:text="${usuario.email}">correo</p>
+                <div class="form-row">
+                    <div>
+                        <label for="telefono">Teléfono</label>
+                        <input type="text" id="telefono" th:field="*{telefono}" maxlength="20" placeholder="Ej.: 300 123 4567">
+                        <p class="error" th:if="${#fields.hasErrors('telefono')}" th:errors="*{telefono}"></p>
+                    </div>
+                    <div>
+                        <label for="ciudad">Ciudad</label>
+                        <input type="text" id="ciudad" th:field="*{ciudad}" maxlength="60">
+                        <p class="error" th:if="${#fields.hasErrors('ciudad')}" th:errors="*{ciudad}"></p>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section" th:if="${esContador}">
+                <legend>Información profesional</legend>
+                <div class="form-row">
+                    <div>
+                        <label>Tipo de contador</label>
+                        <p class="campo-lectura" th:text="${usuario.rol.etiqueta}">Contador público</p>
+                    </div>
+                    <div>
+                        <label>Tarjeta profesional</label>
+                        <p class="campo-lectura" th:text="${usuario.tarjetaProfesional != null ? usuario.tarjetaProfesional : 'No registrado'}">TP</p>
+                    </div>
+                </div>
+                <p class="hint">El número de tarjeta profesional no se edita aquí: cambiarlo exige una nueva verificación (sección Verificación).</p>
+                <label for="descripcionProfesional">Descripción profesional</label>
+                <textarea id="descripcionProfesional" th:field="*{descripcionProfesional}" rows="3" maxlength="500"
+                          placeholder="Experiencia, especialidades, tipos de trámite que atiendes..."></textarea>
+                <p class="error" th:if="${#fields.hasErrors('descripcionProfesional')}" th:errors="*{descripcionProfesional}"></p>
+                <div class="form-row">
+                    <div>
+                        <label for="tarifaBase">Tarifa base (COP)</label>
+                        <input type="number" id="tarifaBase" th:field="*{tarifaBase}" min="0" step="any">
+                        <p class="error" th:if="${#fields.hasErrors('tarifaBase')}" th:errors="*{tarifaBase}"></p>
+                    </div>
+                    <div>
+                        <label for="aniosExperiencia">Años de experiencia (0 a 60)</label>
+                        <input type="number" id="aniosExperiencia" th:field="*{aniosExperiencia}" min="0" max="60" step="1">
+                        <p class="error" th:if="${#fields.hasErrors('aniosExperiencia')}" th:errors="*{aniosExperiencia}"></p>
+                    </div>
+                </div>
+                <label>Especialidades (trámites que atiendes)</label>
+                <div class="check-grid">
+                    <label class="check-item" th:each="t, it : ${tramites}">
+                        <input type="checkbox" th:field="*{especialidades}" th:value="${t}">
+                        <span th:text="${t}">Trámite</span>
+                    </label>
+                </div>
+                <p class="hint">Se muestran en tu perfil público junto con tu descripción y tus calificaciones.
+                    <a th:href="@{'/contadores/' + ${usuario.id}}">Ver mi perfil público</a></p>
+            </fieldset>
+
+            <button type="submit">Guardar cambios</button>
         </form>
 
-        <form th:if="${usuario.fotoPerfil != null}" th:action="@{/perfil/foto/eliminar}" method="post"
-              class="row-actions" data-confirm="¿Eliminar tu foto de perfil?">
-            <button type="submit" class="btn-small btn-muted">Eliminar foto</button>
-        </form>
+        <!-- ================= Mentor (solo practicante) ================= -->
+        <section class="detalle-bloque" th:if="${usuario.rol.name() == 'CONTADOR_PRACTICANTE'}">
+            <h3>Mentor asignado</h3>
+            <dl class="ficha" th:if="${usuario.mentor != null}">
+                <dt>Nombre</dt><dd th:text="${usuario.mentor.nombre}">Mentor</dd>
+                <dt>Correo</dt><dd th:text="${usuario.mentor.email}">correo</dd>
+            </dl>
+            <p class="empty" th:if="${usuario.mentor == null}">Aún no tienes mentor. Solicítalo desde <a th:href="@{/practicante/mentor}">Mi mentor</a>.</p>
+        </section>
+
+        <!-- ================= Verificacion (contadores) ================= -->
+        <section th:if="${esContador}" class="detalle-bloque">
+            <h3>Verificación</h3>
+            <dl class="ficha">
+                <dt>Estado</dt>
+                <dd>
+                    <span th:if="${usuario.estadoVerificacion != null}"
+                          th:class="${'badge badge-' + #strings.toLowerCase(usuario.estadoVerificacion.name())}"
+                          th:text="${usuario.estadoVerificacion.etiqueta}">Pendiente</span>
+                    <span th:if="${usuario.estadoVerificacion == null}">No registrado</span>
+                </dd>
+                <dt>Fecha de solicitud</dt>
+                <dd th:text="${usuario.fechaSolicitudVerificacion != null ? #temporals.format(usuario.fechaSolicitudVerificacion, 'dd/MM/yyyy HH:mm') : 'No registrado'}">-</dd>
+                <dt>Fecha de revisión</dt>
+                <dd th:text="${usuario.fechaRevisionVerificacion != null ? #temporals.format(usuario.fechaRevisionVerificacion, 'dd/MM/yyyy HH:mm') : 'No registrado'}">-</dd>
+                <dt>Observación del administrador</dt>
+                <dd th:text="${usuario.observacionVerificacion != null ? usuario.observacionVerificacion : 'No registrado'}">-</dd>
+                <dt th:if="${usuario.motivoRechazo != null}">Motivo del rechazo</dt>
+                <dd th:if="${usuario.motivoRechazo != null}" th:text="${usuario.motivoRechazo}">-</dd>
+                <dt>Soporte de la tarjeta profesional</dt>
+                <dd>
+                    <a th:if="${usuario.soporteTarjetaProfesional != null}" th:href="@{/perfil/verificacion/documentos/tarjeta}"
+                       target="_blank" rel="noopener" class="btn btn-small btn-muted">Ver</a>
+                    <span th:unless="${usuario.soporteTarjetaProfesional != null}">No adjuntado</span>
+                </dd>
+                <dt>Documento de identidad</dt>
+                <dd>
+                    <a th:if="${usuario.soporteDocumentoIdentidad != null}" th:href="@{/perfil/verificacion/documentos/identidad}"
+                       target="_blank" rel="noopener" class="btn btn-small btn-muted">Ver</a>
+                    <span th:unless="${usuario.soporteDocumentoIdentidad != null}">No adjuntado</span>
+                </dd>
+            </dl>
+
+            <!-- APROBADO: los documentos no se reemplazan; se pide una nueva verificacion -->
+            <th:block th:if="${usuario.estadoVerificacion != null and usuario.estadoVerificacion.name() == 'APROBADO'}">
+                <p class="hint">Tu cuenta está verificada, así que tus documentos no se pueden reemplazar. Si cambió tu tarjeta profesional o tus datos, solicita una nueva verificación.</p>
+                <button type="button" class="btn-muted" data-abrir-modal="modal-nueva-verificacion">Solicitar nueva verificación</button>
+            </th:block>
+
+            <form th:if="${usuario.estadoVerificacion == null or usuario.estadoVerificacion.name() != 'APROBADO'}"
+                  th:action="@{/perfil/verificacion(_csrf=${_csrf.token})}" method="post" enctype="multipart/form-data" class="auth-form">
+                <label for="soporteTarjeta">Nuevo soporte de la tarjeta profesional (obligatorio)</label>
+                <input type="file" id="soporteTarjeta" name="soporteTarjeta" accept=".pdf,.jpg,.jpeg,.png" required>
+                <label for="soporteDocumento">Documento de identidad (opcional)</label>
+                <input type="file" id="soporteDocumento" name="soporteDocumento" accept=".pdf,.jpg,.jpeg,.png">
+                <p class="hint">PDF, JPG o PNG de máximo 10 MB. Al enviarlo, tu solicitud vuelve a quedar pendiente y el administrador la revisa de nuevo.</p>
+                <button type="submit">Enviar soporte</button>
+            </form>
+        </section>
+
+        <!-- ================= Cuenta y seguridad ================= -->
+        <section class="detalle-bloque">
+            <h3>Cuenta y seguridad</h3>
+            <dl class="ficha">
+                <dt>Rol</dt><dd th:text="${usuario.rol.etiqueta}">Rol</dd>
+            </dl>
+            <form th:action="@{/perfil/contrasena}" method="post" class="auth-form form-pro">
+                <fieldset class="form-section">
+                    <legend>Cambiar contraseña</legend>
+                    <label for="actual">Contraseña actual</label>
+                    <input type="password" id="actual" name="actual" required autocomplete="current-password">
+                    <div class="form-row">
+                        <div>
+                            <label for="nueva" th:text="${'Nueva contraseña (mínimo ' + contrasenaMin + ' caracteres)'}">Nueva contraseña</label>
+                            <input type="password" id="nueva" name="nueva" required th:minlength="${contrasenaMin}" autocomplete="new-password">
+                        </div>
+                        <div>
+                            <label for="confirmacion">Confirmar nueva contraseña</label>
+                            <input type="password" id="confirmacion" name="confirmacion" required th:minlength="${contrasenaMin}" autocomplete="new-password">
+                        </div>
+                    </div>
+                </fieldset>
+                <button type="submit">Cambiar contraseña</button>
+            </form>
+        </section>
 
         <p class="link-secondary"><a th:href="@{/inicio}">Volver</a></p>
     </main>
 </div>
+
+<th:block th:if="${usuario.contador and usuario.estadoVerificacion != null and usuario.estadoVerificacion.name() == 'APROBADO'}">
+    <dialog th:replace="~{fragments/modal :: modal('modal-nueva-verificacion', 'Solicitar nueva verificación', ~{::#form-nueva-verificacion})}">
+        <form id="form-nueva-verificacion" th:action="@{/perfil/verificacion/nueva}" method="post">
+            <div class="modal-cuerpo">
+                <p>Tu estado pasará de <strong>Aprobado</strong> a <strong>Pendiente</strong>. Mientras el administrador revisa, <strong>no podrás enviar ofertas</strong>. Después podrás subir nuevos soportes desde esta página.</p>
+                <label for="nuevaTarjeta">Nuevo número de tarjeta profesional (solo si cambió)</label>
+                <input type="text" id="nuevaTarjeta" name="nuevaTarjeta" maxlength="50">
+                <label class="check-item modal-confirmacion">
+                    <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+                    <span>Entiendo que mi cuenta dejará de estar verificada hasta una nueva aprobación</span>
+                </label>
+            </div>
+            <div class="modal-pie">
+                <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+                <button type="submit" data-confirmar disabled>Solicitar nueva verificación</button>
+            </div>
+        </form>
+    </dialog>
+</th:block>
 
 <script th:src="@{/js/app.js}"></script>
 </body>

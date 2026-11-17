@@ -9,7 +9,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class VistasController {
@@ -37,10 +39,18 @@ public class VistasController {
     }
 
     @GetMapping("/notificaciones")
-    public String notificaciones(Model model, Authentication authentication) {
+    public String notificaciones(@RequestParam(required = false) String filtro, Model model, Authentication authentication) {
         Usuario usuario = usuarioActual(authentication);
-        model.addAttribute("notificaciones", notificacionService.listar(usuario));
+        String filtroValido = "pendientes".equals(filtro) || "leidas".equals(filtro) ? filtro : "todas";
+        model.addAttribute("notificaciones", notificacionService.listar(usuario, filtroValido));
+        model.addAttribute("filtro", filtroValido);
         return "notificaciones";
+    }
+
+    // marca la notificacion como leida y lleva a su enlace (solo rutas internas)
+    @GetMapping("/notificaciones/{id}/abrir")
+    public String abrirNotificacion(@PathVariable Long id, Authentication authentication) {
+        return "redirect:" + notificacionService.abrir(id, usuarioActual(authentication));
     }
 
     @PostMapping("/notificaciones/leer")

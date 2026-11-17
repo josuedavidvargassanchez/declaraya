@@ -20,40 +20,16 @@
           <div class="stat-card"><div class="stat-ico c-violet"><span th:replace="~{fragments/icons :: i('file')}"></span></div><div><p class="stat-num" th:text="${ofertasTotal}">0</p><p class="stat-lbl">Ofertas enviadas</p></div></div>
         </div>
 
-        <div class="banner-warning" th:unless="${usuario.verificado}">
-          Tu cuenta aun no ha sido verificada por el administrador.
-        </div>
+        <th:block th:replace="~{fragments/verificacion :: aviso(${usuario})}"></th:block>
 
         <div class="banner-warning" th:if="${usuario.mentor != null}">
           Supervisado por tu mentor:
           <strong th:text="${usuario.mentor.nombre}">Mentor</strong>
         </div>
 
-        <div th:if="${usuario.mentor == null}">
-          <h2>Elige tu mentor</h2>
-          <form
-            th:action="@{/practicante/mentor}"
-            method="post"
-            class="inline-form"
-          >
-            <select name="mentorId" required>
-              <option
-                th:each="m : ${mentoresDisponibles}"
-                th:value="${m.id}"
-                th:text="${m.nombre}"
-              ></option>
-            </select>
-            <button
-              type="submit"
-              class="btn-small"
-              th:disabled="${mentoresDisponibles.isEmpty()}"
-            >
-              Elegir mentor
-            </button>
-          </form>
-          <p th:if="${mentoresDisponibles.isEmpty()}" class="empty">
-            Todavia no hay contadores verificados disponibles como mentores.
-          </p>
+        <div class="banner-warning" th:if="${usuario.mentor == null}">
+          <span th:text="${solicitudMentoriaPendiente} ? 'Tu solicitud de mentoría está pendiente de revisión por el administrador. Podrás ofertar cuando te asigne un mentor.' : 'Aún no tienes un mentor asignado, así que no puedes ofertar.'">Sin mentor</span>
+          <a th:href="@{/practicante/mentor}" class="btn btn-small">Ir a Mi mentor</a>
         </div>
 
         <p class="success" th:if="${param.ofertaEnviada}">
@@ -65,7 +41,7 @@
           Tu cuenta debe estar verificada para ofertar.
         </p>
         <p class="error" th:if="${param.errorMentor}">
-          Debes elegir un mentor antes de ofertar.
+          Necesitas un mentor asignado antes de ofertar. Solicítalo en Mi mentor.
         </p>
         <p class="error" th:if="${param.errorCasoActivo}">
           Ya tienes un caso activo; finalizalo antes de tomar otro.
@@ -78,6 +54,9 @@
         </p>
         <p class="error" th:if="${param.errorDuplicada}">
           Ya enviaste una oferta para esa solicitud.
+        </p>
+        <p class="error" th:if="${param.errorFecha}">
+          Indica una fecha estimada de entrega futura y de máximo 120 días.
         </p>
 
         <h2>Solicitudes disponibles</h2>
@@ -115,6 +94,14 @@
                 placeholder="Valor propuesto"
                 required
               />
+              <input
+                type="date"
+                name="fechaEntregaEstimada"
+                title="Fecha estimada de entrega (máximo 120 días)"
+                th:min="${#temporals.format(#temporals.createToday().plusDays(1), 'yyyy-MM-dd')}"
+                th:max="${#temporals.format(#temporals.createToday().plusDays(120), 'yyyy-MM-dd')}"
+                required
+              />
               <button type="submit" class="btn-small">Enviar oferta</button>
             </form>
           </div>
@@ -127,6 +114,7 @@
         <div class="list">
           <div class="list-item" th:each="o : ${misOfertas}">
             <span th:text="${o.solicitud.titulo}">Solicitud</span>
+            <span class="list-meta" th:text="${o.fechaEntregaEstimada != null ? 'Entrega: ' + #temporals.format(o.fechaEntregaEstimada, 'dd/MM/yyyy') : 'Entrega: No registrada'}">Entrega</span>
             <span th:class="${'badge badge-' + #strings.toLowerCase(o.estado.name())}" th:text="${#strings.capitalize(#strings.toLowerCase(o.estado.name()))}">Estado</span>
             <span class="inline-actions" th:if="${o.estado.name() == 'PENDIENTE' and o.solicitud.estado.name() == 'ABIERTA'}">
               <a th:href="@{'/ofertas/' + ${o.id} + '/editar'}" class="btn btn-small btn-muted">Editar</a>
@@ -151,9 +139,11 @@
           <div class="list-item" th:each="sup : ${supervisiones}">
             <span th:text="${sup.acuerdo.oferta.solicitud.titulo}">Caso</span>
             <span class="tag" th:text="${sup.estado}">Estado</span>
+            <span class="tag" th:if="${sup.acuerdo.etapa != null}" th:text="${sup.acuerdo.etapa.etiqueta}">Etapa</span>
+            <a th:href="@{'/acuerdos/' + ${sup.acuerdo.id}}" class="btn btn-small">Ver detalle</a>
             <a
               th:href="@{'/acuerdos/' + ${sup.acuerdo.id} + '/chat'}"
-              class="btn btn-small"
+              class="btn btn-small btn-muted"
               >Ver chat</a
             >
           </div>

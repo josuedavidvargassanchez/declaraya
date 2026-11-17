@@ -3,9 +3,16 @@ package com.example.declaraya.controllers;
 import com.example.declaraya.dto.NuevaSolicitudDTO;
 import com.example.declaraya.enums.EstadoOferta;
 import com.example.declaraya.enums.EstadoSolicitud;
+import com.example.declaraya.enums.TipoDocumentoCliente;
+import com.example.declaraya.models.Acuerdo;
+import com.example.declaraya.models.DocumentoCliente;
 import com.example.declaraya.models.Oferta;
 import com.example.declaraya.models.SolicitudDeclaracion;
 import com.example.declaraya.models.Usuario;
+import com.example.declaraya.services.AcuerdoService;
+import com.example.declaraya.services.CatalogoRequisitos;
+import com.example.declaraya.services.DocumentoClienteService;
+import com.example.declaraya.services.FlujoAcuerdoService;
 import com.example.declaraya.services.NotificacionService;
 import com.example.declaraya.services.OfertaService;
 import com.example.declaraya.services.SolicitudDeclaracionService;
@@ -32,18 +39,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Controller
 public class SolicitudController {
 
-    private static final List<String> TIPOS_DECLARACION = List.of(
-            "Declaración de renta",
-            "Declaración de IVA",
-            "Retención en la fuente",
-            "Impuesto de industria y comercio (ICA)",
-            "Régimen Simple de Tributación",
-            "Información exógena",
-            "Actualización o inscripción del RUT",
-            "Corrección de una declaración",
-            "Solicitud de devolución de saldo a favor",
-            "Respuesta a requerimiento de la DIAN",
-            "Asesoría tributaria");
+    // el catalogo vive en CatalogoRequisitos para compartirlo con los requisitos y las especialidades
+    private static final List<String> TIPOS_DECLARACION = CatalogoRequisitos.TRAMITES;
 
     private static final List<Integer> ANIOS_GRAVABLES = List.of(2026, 2025, 2024, 2023, 2022);
 
@@ -71,6 +68,18 @@ public class SolicitudController {
 
     @Autowired
     private NotificacionService notificacionService;
+
+    @Autowired
+    private DocumentoClienteService documentoService;
+
+    @Autowired
+    private CatalogoRequisitos catalogo;
+
+    @Autowired
+    private AcuerdoService acuerdoService;
+
+    @Autowired
+    private FlujoAcuerdoService flujoService;
 
     private Usuario usuarioActual(Authentication authentication) {
         return usuarioService.buscarPorEmail(authentication.getName())
@@ -218,6 +227,8 @@ public class SolicitudController {
     public String eliminarSolicitud(@PathVariable Long id, Authentication authentication) {
         SolicitudDeclaracion solicitud = solicitudDeLaPersona(id, usuarioActual(authentication));
         if (solicitud.getEstado() == EstadoSolicitud.ABIERTA) {
+            // los documentos no se borran: vuelven a "Mis documentos" sin solicitud
+            documentoService.desvincularDeSolicitud(solicitud);
             ofertaService.eliminarPorSolicitud(solicitud);
             solicitudService.eliminar(id);
         }
@@ -232,10 +243,28 @@ public class SolicitudController {
         Usuario usuario = usuarioActual(authentication);
         SolicitudDeclaracion solicitud = solicitudService.buscarPorId(id);
         boolean esDueno = solicitud.getPersona().getId().equals(usuario.getId());
-        
+
         model.addAttribute("solicitud", solicitud);
         model.addAttribute("esDueno", esDueno);
         model.addAttribute("ofertas", esDueno ? ofertaService.listarPorSolicitud(solicitud) : List.of());
+
+        // "Documentos de esta solicitud": el dueño, y el contador o mentor del acuerdo (solo lectura).
+        // Los demas contadores (incluidos los que ofertaron sin ganar) no ven la seccion.
+        boolean verDocumentos = documentoService.puedeVerDocumentosDe(solicitud, usuario);
+        List<DocumentoCliente> documentos = verDocumentos ? documentoService.listarPorSolicitud(solicitud) : List.of();
+        model.addAttribute("verDocumentos", verDocumentos);
+        model.addAttribute("documentos", documentos);
+        // lista de verificacion: requisitos del catalogo + documentos que pidio el contador
+        Acuerdo acuerdo = acuerdoService.buscarPorSolicitud(solicitud).orElse(null);
+        model.addAttribute("acuerdoSolicitud", acuerdo);
+        model.addAttribute("checklist", verDocumentos ? catalogo.verificar(solicitud.getTitulo(), documentos) : List.of());
+        model.addAttribute("requerimientos", verDocumentos && acuerdo != null ? flujoService.requerimientos(acuerdo) : List.of());
+        model.addAttribute("requisitos", catalogo.requisitosPara(solicitud.getTitulo()));
+        model.addAttribute("tipos", TipoDocumentoCliente.values());
+        model.addAttribute("solicitudesVinculables", esDueno
+                ? solicitudService.listarPorPersona(usuario).stream().filter(s -> s.getEstado() != EstadoSolicitud.CERRADA).toList()
+                : List.of());
+        model.addAttribute("nombreMax", DocumentoClienteService.NOMBRE_MAX);
         return "solicitud-detalle";
     }
 }

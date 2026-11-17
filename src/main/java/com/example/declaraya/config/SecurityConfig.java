@@ -29,10 +29,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/solicitudes/*/ofertas").hasAnyRole("CONTADOR_PUBLICO", "CONTADOR_PRACTICANTE")
                         .requestMatchers("/ofertas/*/aceptar", "/ofertas/*/rechazar").hasRole("PERSONA")
                         .requestMatchers("/ofertas/*/editar", "/ofertas/*/retirar").hasAnyRole("CONTADOR_PUBLICO", "CONTADOR_PRACTICANTE")
+                        // mentorias: ademas de la ruta, MentoriaService exige ser el mentor vigente o el dueño de la solicitud
+                        .requestMatchers("/admin/mentorias/**").hasRole("ADMIN")
+                        .requestMatchers("/contador/practicantes/**").hasRole("CONTADOR_PUBLICO")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/contador/**").hasRole("CONTADOR_PUBLICO")
                         .requestMatchers("/practicante/**").hasRole("CONTADOR_PRACTICANTE")
                         .requestMatchers("/cliente/**").hasRole("PERSONA")
+                        // ver/descargar documentos del cliente: cualquier usuario autenticado, pero el
+                        // controlador exige DocumentoClienteService.puedeVer y responde 403 si no aplica
+                        .requestMatchers(HttpMethod.GET, "/documentos/*", "/documentos/*/descargar").authenticated()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form

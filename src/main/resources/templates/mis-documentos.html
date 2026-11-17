@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeclaraYa - Mis documentos</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+<div class="layout">
+    <aside th:replace="~{fragments/sidebar :: sidebar('documentos')}"></aside>
+
+    <main class="content">
+        <div class="content-header">
+            <div>
+                <h2>Mis documentos</h2>
+                <p class="page-lead">Guarda tus documentos una sola vez y vincúlalos a tus solicitudes. Solo tú y el contador de tu acuerdo pueden verlos.</p>
+            </div>
+            <button type="button" data-abrir-modal="modal-doc-subir"><span th:replace="~{fragments/icons :: i('plus')}"></span> Subir documento</button>
+        </div>
+
+        <p class="success" th:if="${param.documentoSubido}">Documento subido correctamente.</p>
+        <p class="success" th:if="${param.documentoReemplazado}">Archivo reemplazado.</p>
+        <p class="success" th:if="${param.documentoVinculado}">Solicitud relacionada actualizada.</p>
+        <p class="success" th:if="${param.documentoEliminado}">Documento eliminado.</p>
+        <p class="error" th:if="${param.errorDocumento}" th:text="${param.errorDocumento}">Error</p>
+
+        <section class="detalle-bloque">
+            <h3>Documentos personales</h3>
+            <th:block th:replace="~{fragments/documentos :: lista(${personales}, true, '/cliente/documentos', 'No tienes documentos personales sin solicitud (identidad, RUT u otros).')}"></th:block>
+        </section>
+
+        <section class="detalle-bloque">
+            <h3>Documentos tributarios</h3>
+            <th:block th:replace="~{fragments/documentos :: lista(${tributarios}, true, '/cliente/documentos', 'No tienes documentos tributarios sin solicitud (certificados, extractos, declaraciones anteriores).')}"></th:block>
+        </section>
+
+        <section class="detalle-bloque">
+            <h3>Documentos de solicitudes</h3>
+            <p class="hint">Los documentos de una solicitud con acuerdo quedan bloqueados porque los usa tu contador. Si necesitas cambiar algo, sube un documento nuevo.</p>
+            <th:block th:replace="~{fragments/documentos :: lista(${deSolicitudes}, true, '/cliente/documentos', 'Aún no has vinculado documentos a tus solicitudes.')}"></th:block>
+        </section>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/documentos :: modales(null, '/cliente/documentos')}"></th:block>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

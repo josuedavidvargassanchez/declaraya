@@ -1,18 +1,19 @@
 package com.example.declaraya.controllers;
 
 import com.example.declaraya.enums.EstadoAcuerdo;
-import com.example.declaraya.enums.EstadoSolicitud;
 import com.example.declaraya.enums.EstadoSupervision;
+import com.example.declaraya.exceptions.ReglaNegocioException;
 import com.example.declaraya.models.Acuerdo;
 import com.example.declaraya.models.Archivo;
 import com.example.declaraya.models.Chat;
+import com.example.declaraya.models.EntregaTrabajo;
 import com.example.declaraya.models.Mensaje;
 import com.example.declaraya.models.Usuario;
 import com.example.declaraya.services.AcuerdoService;
 import com.example.declaraya.services.ArchivoService;
 import com.example.declaraya.services.ChatService;
 import com.example.declaraya.services.DisputaService;
-import com.example.declaraya.services.SolicitudDeclaracionService;
+import com.example.declaraya.services.FlujoAcuerdoService;
 import com.example.declaraya.services.SupervisionService;
 import com.example.declaraya.services.UsuarioService;
 
@@ -56,7 +57,7 @@ public class AcuerdoController {
     private SupervisionService supervisionService;
 
     @Autowired
-    private SolicitudDeclaracionService solicitudService;
+    private FlujoAcuerdoService flujoService;
 
     private Usuario usuarioActual(Authentication authentication) {
         return usuarioService.buscarPorEmail(authentication.getName())
@@ -110,6 +111,7 @@ public class AcuerdoController {
 
         boolean esParticipante = acuerdoService.esParticipante(acuerdo, usuario);
         boolean bloqueado = bloqueadoPorMentor(acuerdo);
+        boolean disputaActiva = disputaService.hayDisputaAbierta(acuerdo);
         Usuario persona = acuerdo.getOferta().getSolicitud().getPersona();
 
         model.addAttribute("acuerdo", acuerdo);
@@ -118,10 +120,18 @@ public class AcuerdoController {
         model.addAttribute("esParticipante", esParticipante);
         model.addAttribute("esPersona", usuario.getId().equals(persona.getId()));
         model.addAttribute("bloqueadoPorMentor", bloqueado);
-        model.addAttribute("chatHabilitado",
-                esParticipante && !bloqueado && acuerdo.getEstado() == EstadoAcuerdo.ACTIVO);
-        model.addAttribute("disputaAbierta", disputaService.hayDisputaAbierta(acuerdo));
+        model.addAttribute("chatHabilitado", esParticipante && puedeEscribir(acuerdo, bloqueado, disputaActiva));
+        model.addAttribute("disputaAbierta", disputaActiva);
+        // "Finalizar" solo aparece cuando hay una entrega enviada al cliente (equivale a confirmar la recepcion)
+        model.addAttribute("finalizarHabilitado", esParticipante && acuerdo.getEstado() == EstadoAcuerdo.ACTIVO
+                && flujoService.entregaEnviada(acuerdo) != null);
         return "acuerdo-chat";
+    }
+
+    // el chat normal exige el acuerdo activo; mientras haya una disputa activa las partes
+    // tambien pueden escribir para responder a la administracion (aunque el acuerdo este finalizado)
+    private boolean puedeEscribir(Acuerdo acuerdo, boolean bloqueado, boolean disputaActiva) {
+        return disputaActiva || (!bloqueado && acuerdo.getEstado() == EstadoAcuerdo.ACTIVO);
     }
 
     @PostMapping("/acuerdos/{id}/chat/mensajes")
@@ -132,7 +142,7 @@ public class AcuerdoController {
         Usuario usuario = usuarioActual(authentication);
         Acuerdo acuerdo = acuerdoDeParticipante(id, usuario);
 
-        if (acuerdo.getEstado() != EstadoAcuerdo.ACTIVO || bloqueadoPorMentor(acuerdo)) {
+        if (!puedeEscribir(acuerdo, bloqueadoPorMentor(acuerdo), disputaService.hayDisputaAbierta(acuerdo))) {
             return irAlChat(id, "errorChat");
         }
 
@@ -166,9 +176,12 @@ public class AcuerdoController {
         return irAlChat(id, null);
     }
 
-    // solo la persona confirma que recibio todo y cierra el acuerdo
+    // solo la persona finaliza, y solo si hay una entrega ENVIADA: hace lo mismo que "Confirmar recepcion"
+    // (los acuerdos ya finalizados no cambian)
     @PostMapping("/acuerdos/{id}/finalizar")
-    public String finalizar(@PathVariable Long id, Authentication authentication) {
+    public String finalizar(@PathVariable Long id,
+                            @RequestParam(defaultValue = "false") boolean confirmado,
+                            Authentication authentication) {
         Usuario usuario = usuarioActual(authentication);
         Acuerdo acuerdo = acuerdoDeParticipante(id, usuario);
         Usuario persona = acuerdo.getOferta().getSolicitud().getPersona();
@@ -176,11 +189,16 @@ public class AcuerdoController {
         if (!usuario.getId().equals(persona.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo la persona puede finalizar el acuerdo");
         }
-        if (acuerdo.getEstado() == EstadoAcuerdo.ACTIVO && !bloqueadoPorMentor(acuerdo)) {
-            acuerdoService.finalizar(acuerdo);
-            solicitudService.actualizarEstado(acuerdo.getOferta().getSolicitud().getId(), EstadoSolicitud.CERRADA);
+        EntregaTrabajo enviada = flujoService.entregaEnviada(acuerdo);
+        if (acuerdo.getEstado() != EstadoAcuerdo.ACTIVO || enviada == null) {
+            return irAlChat(id, "errorFinalizar");
         }
-        return irAlChat(id, null);
+        try {
+            flujoService.confirmarRecepcion(id, enviada.getId(), usuario, confirmado);
+        } catch (ReglaNegocioException e) {
+            return irAlChat(id, "errorFinalizar");
+        }
+        return "redirect:/acuerdos/" + id + "?recepcionConfirmada";
     }
 
     @PostMapping("/acuerdos/{id}/disputa")

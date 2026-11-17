@@ -1,0 +1,26 @@
+<!--
+  Modal reutilizable basado en <dialog>.
+  Uso:
+    <button type="button" data-abrir-modal="modal-x">Abrir</button>
+    <dialog th:replace="~{fragments/modal :: modal('modal-x', 'Título', ~{::#form-x})}">
+      <form id="form-x" th:action="@{/ruta}" method="post">
+        <div class="modal-cuerpo"> ...campos (los obligatorios con required)...
+          <label class="check-item"><input type="checkbox" name="confirmado" value="true" required data-confirmacion> <span>Confirmo...</span></label>
+        </div>
+        <div class="modal-pie">
+          <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+          <button type="submit" data-confirmar disabled>Confirmar</button>
+        </div>
+      </form>
+    </dialog>
+  app.js abre el dialogo, lo cierra con Escape o "Cancelar" y mantiene deshabilitado el boton
+  [data-confirmar] hasta que los campos required esten completos y la casilla marcada.
+-->
+<dialog xmlns:th="http://www.thymeleaf.org" th:fragment="modal(id, titulo, cuerpo)"
+        th:id="${id}" class="modal" th:attr="aria-labelledby=${id + '-titulo'}">
+    <div class="modal-cabecera">
+        <h3 th:id="${id + '-titulo'}" th:text="${titulo}">Título</h3>
+        <button type="button" class="modal-cerrar" data-cerrar-modal aria-label="Cerrar">&times;</button>
+    </div>
+    <th:block th:replace="${cuerpo}"></th:block>
+</dialog>

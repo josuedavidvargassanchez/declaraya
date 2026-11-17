@@ -1,0 +1,157 @@
+<!--
+  Documentos del cliente. Lo usan mis-documentos.html y solicitud-detalle.html para que las dos
+  pantallas muestren exactamente lo mismo (la relacion vive en DocumentoCliente.solicitud).
+-->
+
+<!-- lista(docs, propietario, volver, vacio)
+     propietario: true muestra las acciones de edicion; false solo Ver y Descargar (contador o mentor).
+     volver: a donde regresa cada accion ('/cliente/documentos' o '/solicitudes/{id}'). -->
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="lista(docs, propietario, volver, vacio)">
+    <div class="list">
+        <div class="list-item doc-item" th:each="doc : ${docs}"
+             th:with="base=${propietario ? '/cliente/documentos/' : '/documentos/'}">
+            <span class="doc-ico"><span th:replace="~{fragments/icons :: i('file')}"></span></span>
+            <div class="doc-info">
+                <strong th:text="${doc.nombre}">Nombre del documento</strong>
+                <span class="list-meta">
+                    <span th:text="${doc.tipo.etiqueta}">Tipo</span> ·
+                    <span th:text="${'Cargado el ' + #temporals.format(doc.fechaCarga, 'dd/MM/yyyy HH:mm')}">Fecha</span>
+                </span>
+                <span class="list-meta" th:if="${doc.solicitud != null}">
+                    Solicitud: <a th:href="@{'/solicitudes/' + ${doc.solicitud.id}}" th:text="${doc.solicitud.titulo + ' (#' + doc.solicitud.id + ')'}">Solicitud</a>
+                </span>
+                <span class="badge badge-bloqueado" th:if="${propietario and !doc.editable}">Bloqueado: en uso en un acuerdo</span>
+            </div>
+            <div class="inline-actions doc-acciones">
+                <a th:href="@{${base + doc.id}}" target="_blank" rel="noopener" class="btn btn-small btn-muted">Ver</a>
+                <a th:href="@{${base + doc.id + '/descargar'}}" class="btn btn-small btn-muted">Descargar</a>
+                <th:block th:if="${propietario and doc.editable}">
+                    <button type="button" class="btn-small btn-muted" data-abrir-modal="modal-doc-reemplazar"
+                            th:data-accion="@{'/cliente/documentos/' + ${doc.id} + '/reemplazar'(_csrf=${_csrf.token})}"
+                            th:data-doc="${doc.nombre}">Reemplazar</button>
+                    <button type="button" class="btn-small btn-muted" data-abrir-modal="modal-doc-vincular"
+                            th:data-accion="@{'/cliente/documentos/' + ${doc.id} + '/vincular'}"
+                            th:data-doc="${doc.nombre}"
+                            th:data-solicitud="${doc.solicitud != null ? doc.solicitud.id : ''}">Solicitud</button>
+                    <button type="button" class="btn-small btn-danger" data-abrir-modal="modal-doc-eliminar"
+                            th:data-accion="@{'/cliente/documentos/' + ${doc.id} + '/eliminar'}"
+                            th:data-doc="${doc.nombre}">Eliminar</button>
+                </th:block>
+            </div>
+        </div>
+        <p th:if="${docs.isEmpty()}" class="empty" th:text="${vacio}">No hay documentos.</p>
+    </div>
+</th:block>
+
+<!-- modales(solicitudFija, volver): un solo modal por accion; el boton que lo abre indica el documento.
+     solicitudFija: id de la solicitud a la que se vincula lo que se sube (o null para elegirla). -->
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="modales(solicitudFija, volver)">
+
+    <dialog th:replace="~{fragments/modal :: modal('modal-doc-subir', 'Subir documento', ~{::#form-doc-subir})}">
+        <form id="form-doc-subir" th:action="@{/cliente/documentos(_csrf=${_csrf.token})}" method="post" enctype="multipart/form-data">
+            <div class="modal-cuerpo">
+                <input type="hidden" name="volver" th:value="${volver}">
+                <label for="doc-tipo">Tipo de documento</label>
+                <select id="doc-tipo" name="tipo" required>
+                    <option value="" selected disabled>Elige el tipo</option>
+                    <optgroup label="Personales">
+                        <option th:each="t : ${tipos}" th:if="${t.categoria.name() == 'PERSONAL'}" th:value="${t.name()}" th:text="${t.etiqueta}">Tipo</option>
+                    </optgroup>
+                    <optgroup label="Tributarios">
+                        <option th:each="t : ${tipos}" th:if="${t.categoria.name() == 'TRIBUTARIO'}" th:value="${t.name()}" th:text="${t.etiqueta}">Tipo</option>
+                    </optgroup>
+                </select>
+                <label for="doc-nombre">Nombre o descripción</label>
+                <input type="text" id="doc-nombre" name="nombre" required th:maxlength="${nombreMax}"
+                       placeholder="Ej.: RUT actualizado 2026">
+                <label for="doc-archivo">Archivo (PDF, JPG o PNG de máximo 10 MB)</label>
+                <input type="file" id="doc-archivo" name="archivo" accept=".pdf,.jpg,.jpeg,.png" required>
+                <input type="hidden" name="requerimientoId" value="">
+                <p class="hint" data-aviso-requerimiento hidden>Este documento cumple lo que te pidió el contador.</p>
+                <th:block th:if="${solicitudFija == null}">
+                    <label for="doc-solicitud">Solicitud relacionada (opcional)</label>
+                    <select id="doc-solicitud" name="solicitudId" data-filtra-requisitos>
+                        <option value="">Sin solicitud</option>
+                        <option th:each="s : ${solicitudesVinculables}" th:value="${s.id}"
+                                th:text="${s.titulo + ' (#' + s.id + ')'}">Solicitud</option>
+                    </select>
+                    <label for="doc-requisito">¿Qué requisito cumple? (opcional)</label>
+                    <select id="doc-requisito" name="requisito">
+                        <option value="">Ninguno en particular</option>
+                        <th:block th:each="entrada : ${requisitosPorSolicitud}">
+                            <option th:each="r : ${entrada.value}" th:value="${r.nombre()}" th:data-solicitud="${entrada.key}"
+                                    th:text="${r.nombre() + (r.obligatorio() ? ' (obligatorio)' : '')}">Requisito</option>
+                        </th:block>
+                    </select>
+                    <p class="hint">Los requisitos dependen del trámite de la solicitud que elijas.</p>
+                </th:block>
+                <th:block th:if="${solicitudFija != null}">
+                    <input type="hidden" name="solicitudId" th:value="${solicitudFija}">
+                    <label for="doc-requisito-fijo">¿Qué requisito cumple? (opcional)</label>
+                    <select id="doc-requisito-fijo" name="requisito">
+                        <option value="">Ninguno en particular</option>
+                        <option th:each="r : ${requisitos}" th:value="${r.nombre()}"
+                                th:text="${r.nombre() + (r.obligatorio() ? ' (obligatorio)' : '')}">Requisito</option>
+                    </select>
+                    <p class="hint">El documento quedará vinculado a esta solicitud.</p>
+                </th:block>
+            </div>
+            <div class="modal-pie">
+                <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+                <button type="submit" data-confirmar disabled>Subir documento</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog th:replace="~{fragments/modal :: modal('modal-doc-reemplazar', 'Reemplazar archivo', ~{::#form-doc-reemplazar})}">
+        <form id="form-doc-reemplazar" th:action="@{/cliente/documentos}" method="post" enctype="multipart/form-data">
+            <div class="modal-cuerpo">
+                <input type="hidden" name="volver" th:value="${volver}">
+                <p>Vas a reemplazar el archivo de <strong data-modal-doc>documento</strong>. El archivo anterior se borra.</p>
+                <label for="doc-reemplazo">Nuevo archivo (PDF, JPG o PNG de máximo 10 MB)</label>
+                <input type="file" id="doc-reemplazo" name="archivo" accept=".pdf,.jpg,.jpeg,.png" required>
+            </div>
+            <div class="modal-pie">
+                <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+                <button type="submit" data-confirmar disabled>Reemplazar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog th:replace="~{fragments/modal :: modal('modal-doc-vincular', 'Solicitud relacionada', ~{::#form-doc-vincular})}">
+        <form id="form-doc-vincular" th:action="@{/cliente/documentos}" method="post">
+            <div class="modal-cuerpo">
+                <input type="hidden" name="volver" th:value="${volver}">
+                <p>Elige la solicitud a la que pertenece <strong data-modal-doc>documento</strong>, o déjalo sin solicitud.</p>
+                <label for="doc-vincular-solicitud">Solicitud</label>
+                <select id="doc-vincular-solicitud" name="solicitudId">
+                    <option value="">Sin solicitud</option>
+                    <option th:each="s : ${solicitudesVinculables}" th:value="${s.id}"
+                            th:text="${s.titulo + ' (#' + s.id + ')'}">Solicitud</option>
+                </select>
+                <p class="hint">Cuando la solicitud tenga un acuerdo, el documento quedará bloqueado y lo verá el contador del acuerdo.</p>
+            </div>
+            <div class="modal-pie">
+                <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+                <button type="submit" data-confirmar disabled>Guardar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog th:replace="~{fragments/modal :: modal('modal-doc-eliminar', 'Eliminar documento', ~{::#form-doc-eliminar})}">
+        <form id="form-doc-eliminar" th:action="@{/cliente/documentos}" method="post">
+            <div class="modal-cuerpo">
+                <input type="hidden" name="volver" th:value="${volver}">
+                <p>Vas a eliminar <strong data-modal-doc>documento</strong>. El archivo se borra del servidor y no se puede recuperar.</p>
+                <label class="check-item modal-confirmacion">
+                    <input type="checkbox" required data-confirmacion>
+                    <span>Entiendo que el documento se eliminará definitivamente</span>
+                </label>
+            </div>
+            <div class="modal-pie">
+                <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+                <button type="submit" class="btn-danger" data-confirmar disabled>Eliminar documento</button>
+            </div>
+        </form>
+    </dialog>
+</th:block>

@@ -4,6 +4,7 @@ import com.example.declaraya.enums.EstadoOferta;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -31,6 +32,9 @@ public class Oferta {
     private EstadoOferta estado = EstadoOferta.PENDIENTE;
 
     private LocalDateTime fechaCreacion = LocalDateTime.now();
+
+    // fecha en que el contador se compromete a entregar (null en ofertas anteriores a este campo)
+    private LocalDate fechaEntregaEstimada;
 
     public Oferta() {
     }
@@ -96,5 +100,13 @@ public class Oferta {
 
     public void setFechaCreacion(LocalDateTime fechaCreacion) {
         this.fechaCreacion = fechaCreacion;
+    }
+
+    public LocalDate getFechaEntregaEstimada() {
+        return fechaEntregaEstimada;
+    }
+
+    public void setFechaEntregaEstimada(LocalDate fechaEntregaEstimada) {
+        this.fechaEntregaEstimada = fechaEntregaEstimada;
     }
 }

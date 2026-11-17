@@ -1,0 +1,126 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Gestión de mentorías</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('mentorias')}"></aside>
+
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <h2>Gestión de mentorías</h2>
+            <p class="page-lead">Revisa las solicitudes de los practicantes y asigna o cambia su mentor. Cada decisión pide confirmación y queda en el historial.</p>
+          </div>
+        </div>
+
+        <div class="stat-cards">
+          <div class="stat-card"><div class="stat-ico c-amber"><span th:replace="~{fragments/icons :: i('clock')}"></span></div><div><p class="stat-num" th:text="${#lists.size(pendientes)}">0</p><p class="stat-lbl">Solicitudes pendientes</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-red"><span th:replace="~{fragments/icons :: i('alert')}"></span></div><div><p class="stat-num" th:text="${#lists.size(sinMentor)}">0</p><p class="stat-lbl">Practicantes sin mentor</p></div></div>
+          <div class="stat-card"><div class="stat-ico c-green"><span th:replace="~{fragments/icons :: i('users')}"></span></div><div><p class="stat-num" th:text="${#lists.size(mentores)}">0</p><p class="stat-lbl">Mentores disponibles</p></div></div>
+        </div>
+
+        <!-- ============ solicitudes pendientes ============ -->
+        <h2>Solicitudes pendientes</h2>
+        <div class="tabla-wrap">
+          <table class="tabla">
+            <thead><tr><th>Practicante</th><th>Tipo</th><th>Fecha</th><th>Especialidad</th><th>Mentor actual</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr th:each="s : ${pendientes}">
+                <td th:text="${s.practicante.nombre}">Practicante</td>
+                <td><span class="chip" th:text="${s.tipo.etiqueta}">Tipo</span></td>
+                <td th:text="${#temporals.format(s.fechaSolicitud, 'dd/MM/yyyy HH:mm')}">Fecha</td>
+                <td th:text="${s.especialidad != null ? s.especialidad : 'Sin preferencia'}">Especialidad</td>
+                <td th:text="${s.practicante.mentor != null ? s.practicante.mentor.nombre : 'Sin mentor'}">Mentor</td>
+                <td class="acciones"><a th:href="@{'/admin/mentorias/' + ${s.id}}" class="btn btn-small">Ver solicitud</a></td>
+              </tr>
+              <tr th:if="${pendientes.isEmpty()}"><td colspan="6" class="empty-celda">No hay solicitudes de mentoría pendientes.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ============ practicantes sin mentor ============ -->
+        <h2>Practicantes sin mentor</h2>
+        <div class="list">
+          <div class="list-item" th:each="p : ${sinMentor}">
+            <span th:text="${p.nombre}">Practicante</span>
+            <span th:if="${p.estadoVerificacion != null}"
+                  th:class="${'badge badge-' + #strings.toLowerCase(p.estadoVerificacion.name())}"
+                  th:text="${p.estadoVerificacion.etiqueta}">Estado</span>
+            <span class="list-meta" th:unless="${p.estadoVerificacion != null and p.estadoVerificacion.name() == 'APROBADO'}">Debe estar verificado para solicitar mentor</span>
+            <a th:href="@{'/admin/mentorias/practicantes/' + ${p.id}}" class="btn btn-small btn-muted list-accion">Ver ficha</a>
+          </div>
+          <p th:if="${sinMentor.isEmpty()}" class="empty">Todos los practicantes tienen mentor.</p>
+        </div>
+
+        <!-- ============ mentores ============ -->
+        <h2>Mentores</h2>
+        <p class="hint">Contadores públicos con la verificación aprobada. No hay un límite de practicantes por mentor.</p>
+        <div class="tabla-wrap">
+          <table class="tabla">
+            <thead><tr><th>Nombre</th><th>Especialidades</th><th>Practicantes asignados</th></tr></thead>
+            <tbody>
+              <tr th:each="m : ${mentores}">
+                <td><a th:href="@{'/contadores/' + ${m.mentor.id}}" th:text="${m.mentor.nombre}">Mentor</a></td>
+                <td>
+                  <span class="chip chip-suave" th:each="esp : ${m.mentor.especialidadesLista}" th:text="${esp}">Especialidad</span>
+                  <span th:if="${m.mentor.especialidadesLista.isEmpty()}">No registradas</span>
+                </td>
+                <td th:text="${m.practicantes}">0</td>
+              </tr>
+              <tr th:if="${mentores.isEmpty()}"><td colspan="3" class="empty-celda">No hay contadores públicos verificados.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ============ historial de asignaciones ============ -->
+        <div class="content-header seccion-con-enlace">
+          <h2>Historial de asignaciones</h2>
+        </div>
+        <form th:action="@{/admin/mentorias}" method="get" class="inline-form filtro-mentorias">
+          <label for="filtro-practicante">Practicante</label>
+          <select id="filtro-practicante" name="practicante">
+            <option value="">Todos</option>
+            <option th:each="p : ${practicantes}" th:value="${p.id}" th:text="${p.nombre}"
+                    th:selected="${filtroPracticante != null and filtroPracticante == p.id}">Practicante</option>
+          </select>
+          <button type="submit" class="btn-small">Filtrar</button>
+          <a th:if="${filtroPracticante != null}" th:href="@{/admin/mentorias}" class="btn btn-small btn-muted">Quitar filtro</a>
+        </form>
+        <div class="tabla-wrap">
+          <table class="tabla">
+            <thead><tr><th>Practicante</th><th>Mentor</th><th>Inicio</th><th>Fin</th><th>Asignada por</th><th>Origen</th><th>Observación</th><th></th></tr></thead>
+            <tbody>
+              <tr th:each="a : ${asignaciones}">
+                <td th:text="${a.practicante.nombre}">Practicante</td>
+                <td th:text="${a.mentor.nombre}">Mentor</td>
+                <td th:text="${#temporals.format(a.fechaInicio, 'dd/MM/yyyy')}">Inicio</td>
+                <td>
+                  <span th:if="${a.vigente}" class="badge badge-aprobado">Vigente</span>
+                  <span th:unless="${a.vigente}" th:text="${#temporals.format(a.fechaFin, 'dd/MM/yyyy')}">Fin</span>
+                </td>
+                <td th:text="${a.asignadaPor != null ? a.asignadaPor.nombre : 'No registrado'}">Admin</td>
+                <td>
+                  <a th:if="${a.solicitud != null}" th:href="@{'/admin/mentorias/' + ${a.solicitud.id}}"
+                     th:text="${'Solicitud #' + a.solicitud.id + ' (' + a.solicitud.tipo.etiqueta + ')'}">Solicitud</a>
+                  <span th:if="${a.solicitud == null}">Sin solicitud</span>
+                </td>
+                <td th:text="${a.observacion != null ? a.observacion : '—'}">Observación</td>
+                <td class="acciones"><a th:href="@{'/admin/mentorias/practicantes/' + ${a.practicante.id}}" class="btn btn-small btn-muted">Ficha</a></td>
+              </tr>
+              <tr th:if="${asignaciones.isEmpty()}"><td colspan="8" class="empty-celda">No hay asignaciones registradas.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

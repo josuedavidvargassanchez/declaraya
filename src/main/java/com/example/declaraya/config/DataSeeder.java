@@ -1,12 +1,14 @@
 package com.example.declaraya.config;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import com.example.declaraya.enums.Rol;
 import com.example.declaraya.services.UsuarioService;
 
-@Component 
+@Component
+@Order(10) // antes de DemoDataSeeder
 public class DataSeeder implements CommandLineRunner {
     private static final String ADMIN_EMAIL ="admin@declaraya.com";
     private static final String ADMIN_PASSWORD ="admin123";

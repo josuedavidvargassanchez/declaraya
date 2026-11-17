@@ -1,0 +1,35 @@
+<!--
+  Lista de verificacion documental: requisitos del catalogo del tramite (Entregado / Pendiente segun
+  exista un documento vinculado con ese requisito) y documentos adicionales que pidio el contador.
+  checklist(items, requerimientos, puedeSubir): puedeSubir muestra los botones "Subir" (solo el cliente).
+  Los botones abren el modal "modal-doc-subir" de fragments/documentos.
+-->
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="checklist(items, requerimientos, puedeSubir)">
+    <div class="checklist">
+        <p class="detalle-etiqueta">Requisitos del trámite</p>
+        <div class="list-item checklist-item" th:each="item : ${items}">
+            <span th:class="${item.entregado() ? 'badge badge-aprobado' : 'badge badge-pendiente'}"
+                  th:text="${item.entregado() ? 'Entregado' : 'Pendiente'}">Pendiente</span>
+            <span class="checklist-nombre" th:text="${item.nombre()}">Requisito</span>
+            <span class="chip chip-suave" th:if="${item.obligatorio()}">Obligatorio</span>
+            <button type="button" class="btn-small btn-muted list-accion" data-abrir-modal="modal-doc-subir"
+                    th:if="${puedeSubir and !item.entregado()}" th:data-requisito="${item.nombre()}">Subir</button>
+        </div>
+        <p class="empty" th:if="${items.isEmpty()}">Este trámite no tiene requisitos definidos.</p>
+
+        <th:block th:if="${!requerimientos.isEmpty()}">
+            <p class="detalle-etiqueta">Documentos que pidió el contador</p>
+            <div class="list-item checklist-item" th:each="r : ${requerimientos}">
+                <span th:class="${r.pendiente ? 'badge badge-pendiente' : 'badge badge-aprobado'}" th:text="${r.estado.etiqueta}">Pendiente</span>
+                <span class="checklist-nombre">
+                    <strong th:text="${r.nombre}">Documento</strong>
+                    <small class="list-meta" th:if="${r.descripcion != null}" th:text="${' · ' + r.descripcion}"></small>
+                    <small class="list-meta" th:text="${' · pedido por ' + r.solicitadoPor.nombre + ' el ' + #temporals.format(r.fechaSolicitud, 'dd/MM/yyyy')}"></small>
+                    <small class="list-meta" th:if="${r.documento != null}" th:text="${' · entregado: ' + r.documento.nombre}"></small>
+                </span>
+                <button type="button" class="btn-small list-accion" data-abrir-modal="modal-doc-subir"
+                        th:if="${puedeSubir and r.pendiente}" th:data-requerimiento="${r.id}" th:data-doc="${r.nombre}">Subir</button>
+            </div>
+        </th:block>
+    </div>
+</th:block>

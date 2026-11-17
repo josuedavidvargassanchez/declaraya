@@ -21,10 +21,7 @@
           <div class="stat-card"><div class="stat-ico c-violet"><span th:replace="~{fragments/icons :: i('file')}"></span></div><div><p class="stat-num" th:text="${ofertasTotal}">0</p><p class="stat-lbl">Ofertas enviadas</p></div></div>
         </div>
 
-        <div class="banner-warning" th:unless="${usuario.verificado}">
-          Tu cuenta aun no ha sido verificada por el administrador. Podras
-          enviar ofertas cuando se valide tu tarjeta profesional.
-        </div>
+        <th:block th:replace="~{fragments/verificacion :: aviso(${usuario})}"></th:block>
         <p class="success" th:if="${param.ofertaEnviada}">
           Oferta enviada correctamente.
         </p>
@@ -41,6 +38,9 @@
         </p>
         <p class="error" th:if="${param.errorDuplicada}">
           Ya enviaste una oferta para esa solicitud.
+        </p>
+        <p class="error" th:if="${param.errorFecha}">
+          Indica una fecha estimada de entrega futura y de máximo 120 días.
         </p>
 
         <h2>Solicitudes disponibles</h2>
@@ -90,13 +90,22 @@
                 th:value="${usuario.tarifaBase}"
                 required
               />
+              <input
+                type="date"
+                name="fechaEntregaEstimada"
+                title="Fecha estimada de entrega"
+                th:min="${#temporals.format(#temporals.createToday().plusDays(1), 'yyyy-MM-dd')}"
+                th:max="${#temporals.format(#temporals.createToday().plusDays(120), 'yyyy-MM-dd')}"
+                required
+              />
               <button type="submit" class="btn-small">Enviar oferta</button>
               <p class="tarifa-nota">
                 Tu tarifa base es $
                 <span
                   th:text="${#numbers.formatDecimal(usuario.tarifaBase, 1, 'POINT', 0, 'COMMA')}"
                   >500.000</span
-                >. Ajustala segun la complejidad de la declaracion.
+                >. Ajustala segun la complejidad de la declaracion. La fecha es tu
+                compromiso de entrega (máximo 120 días).
               </p>
             </form>
           </div>
@@ -110,6 +119,7 @@
           <div class="list-item" th:each="o : ${misOfertas}">
             <span th:text="${o.solicitud.titulo}">Solicitud</span>
             <span th:text="${'$ ' + o.valorPropuesto}">Valor</span>
+            <span class="list-meta" th:text="${o.fechaEntregaEstimada != null ? 'Entrega: ' + #temporals.format(o.fechaEntregaEstimada, 'dd/MM/yyyy') : 'Entrega: No registrada'}">Entrega</span>
             <span th:class="${'badge badge-' + #strings.toLowerCase(o.estado.name())}" th:text="${#strings.capitalize(#strings.toLowerCase(o.estado.name()))}">Estado</span>
             <span class="inline-actions" th:if="${o.estado.name() == 'PENDIENTE' and o.solicitud.estado.name() == 'ABIERTA'}">
               <a th:href="@{'/ofertas/' + ${o.id} + '/editar'}" class="btn btn-small btn-muted">Editar</a>
@@ -131,16 +141,36 @@
 
         <h2>Mis practicantes</h2>
         <div class="list">
-          <div class="list-item" th:each="p : ${practicantes}">
-            <span th:text="${p.nombre}">Practicante</span>
-            <span
-              class="tag"
-              th:text="${p.verificado} ? 'Verificado' : 'Sin verificar'"
-              >Estado</span
-            >
+          <div class="list-item practicante-fila" th:each="fila : ${practicantes}">
+            <div class="doc-info">
+              <strong th:text="${fila.practicante.nombre}">Practicante</strong>
+              <span class="list-meta" th:text="${fila.fechaAsignacion != null ? 'Asignado el ' + #temporals.format(fila.fechaAsignacion, 'dd/MM/yyyy') : 'Fecha de asignación no registrada'}">Asignado</span>
+            </div>
+            <span th:if="${fila.practicante.estadoVerificacion != null}"
+                  th:class="${'badge badge-' + #strings.toLowerCase(fila.practicante.estadoVerificacion.name())}"
+                  th:text="${fila.practicante.estadoVerificacion.etiqueta}">Estado</span>
+            <span class="meta-row">
+              <span class="chip" th:classappend="${fila.porRevisar > 0} ? 'chip-urgente'" th:text="${'Por revisar: ' + fila.porRevisar}">Por revisar</span>
+              <span class="chip" th:text="${'Aprobadas: ' + fila.aprobadas}">Aprobadas</span>
+              <span class="chip" th:text="${'Correcciones pendientes: ' + fila.correccionesPendientes}">Correcciones</span>
+            </span>
+            <a th:href="@{'/contador/practicantes/' + ${fila.practicante.id}}" class="btn btn-small list-accion">Ver supervisiones</a>
           </div>
           <p th:if="${practicantes.isEmpty()}" class="empty">
-            Ningun practicante te ha elegido como mentor.
+            Aún no tienes practicantes asignados. El administrador los asigna desde la gestión de mentorías.
+          </p>
+        </div>
+
+        <h2>Entregas por revisar</h2>
+        <div class="list">
+          <div class="list-item" th:each="e : ${entregasPorRevisar}">
+            <span th:text="${e.contador.nombre}">Practicante</span>
+            <span th:text="${e.acuerdo.oferta.solicitud.titulo}">Caso</span>
+            <span class="list-meta" th:text="${'Enviada el ' + #temporals.format(e.fecha, 'dd/MM/yyyy HH:mm')}">Fecha</span>
+            <a th:href="@{'/acuerdos/' + ${e.acuerdo.id}}" class="btn btn-small list-accion">Revisar entrega</a>
+          </div>
+          <p th:if="${entregasPorRevisar.isEmpty()}" class="empty">
+            No hay entregas de tus practicantes esperando revisión.
           </p>
         </div>
 
@@ -150,6 +180,8 @@
             <span th:text="${sup.practicante.nombre}">Practicante</span>
             <span th:text="${sup.acuerdo.oferta.solicitud.titulo}">Caso</span>
             <span class="tag" th:text="${sup.estado}">Estado</span>
+            <span class="tag" th:if="${sup.acuerdo.etapa != null}" th:text="${sup.acuerdo.etapa.etiqueta}">Etapa</span>
+            <a th:href="@{'/acuerdos/' + ${sup.acuerdo.id}}" class="btn btn-small">Ver detalle</a>
             <a
               th:href="@{'/acuerdos/' + ${sup.acuerdo.id} + '/chat'}"
               class="btn btn-small btn-muted"

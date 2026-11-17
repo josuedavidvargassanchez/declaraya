@@ -1,0 +1,82 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Supervisiones del practicante</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('inicio')}"></aside>
+
+      <main class="content">
+        <div class="content-header">
+          <div class="card-persona">
+            <span th:replace="~{fragments/avatar :: avatar(${p})}"></span>
+            <div>
+              <h2 th:text="${p.nombre}">Practicante</h2>
+              <p class="page-lead" th:text="${asignacion != null ? 'Tu practicante desde el ' + #temporals.format(asignacion.fechaInicio, 'dd/MM/yyyy') : 'Tu practicante'}">Desde</p>
+            </div>
+          </div>
+          <span th:if="${p.estadoVerificacion != null}"
+                th:class="${'badge badge-' + #strings.toLowerCase(p.estadoVerificacion.name())}"
+                th:text="${p.estadoVerificacion.etiqueta}">Estado</span>
+        </div>
+        <p class="hint">Las entregas se aprueban o se devuelven con corrección desde el detalle de cada acuerdo.</p>
+
+        <section class="detalle-bloque">
+          <h3>Acuerdos</h3>
+          <div class="list">
+            <div class="list-item" th:each="a : ${acuerdos}">
+              <span th:text="${a.oferta.solicitud.titulo}">Caso</span>
+              <span class="list-meta" th:text="${a.oferta.solicitud.persona.nombre}">Cliente</span>
+              <span class="tag" th:text="${a.estado}">Estado</span>
+              <span class="tag" th:if="${a.etapa != null}" th:text="${a.etapa.etiqueta}">Etapa</span>
+              <a th:href="@{'/acuerdos/' + ${a.id}}" class="btn btn-small list-accion">Ver detalle</a>
+            </div>
+            <p class="empty" th:if="${acuerdos.isEmpty()}">Este practicante aún no tiene acuerdos.</p>
+          </div>
+        </section>
+
+        <section class="detalle-bloque">
+          <h3>Entregas</h3>
+          <div class="list">
+            <div class="list-item" th:each="e : ${entregas}">
+              <div class="doc-info">
+                <strong th:text="${e.acuerdo.oferta.solicitud.titulo}">Caso</strong>
+                <span class="list-meta" th:text="${e.nombreOriginal + ' · ' + #temporals.format(e.fecha, 'dd/MM/yyyy HH:mm')}">archivo</span>
+                <span class="list-meta" th:if="${e.observacionMentor != null}" th:text="${'Observación del mentor: ' + e.observacionMentor}"></span>
+              </div>
+              <span th:class="${'badge badge-' + #strings.toLowerCase(e.estado.name())}" th:text="${e.estado.etiqueta}">Estado</span>
+              <a th:href="@{'/acuerdos/' + ${e.acuerdo.id}}" class="btn btn-small list-accion"
+                 th:text="${e.estado.name() == 'EN_REVISION_MENTOR' ? 'Revisar entrega' : 'Ver acuerdo'}">Ver acuerdo</a>
+            </div>
+            <p class="empty" th:if="${entregas.isEmpty()}">Este practicante aún no ha enviado entregas.</p>
+          </div>
+        </section>
+
+        <section class="detalle-bloque">
+          <h3>Historial de supervisión</h3>
+          <p class="detalle-etiqueta">Aprobación de casos</p>
+          <div class="list">
+            <div class="list-item" th:each="sup : ${supervisiones}">
+              <span th:text="${sup.acuerdo.oferta.solicitud.titulo}">Caso</span>
+              <span th:class="${'badge badge-' + #strings.toLowerCase(sup.estado.name())}" th:text="${sup.estado}">Estado</span>
+              <span class="list-meta" th:text="${'Mentor: ' + sup.mentor.nombre}">Mentor</span>
+            </div>
+            <p class="empty" th:if="${supervisiones.isEmpty()}">No hay casos supervisados.</p>
+          </div>
+          <p class="detalle-etiqueta">Mentoría</p>
+          <th:block th:replace="~{fragments/mentoria :: historial(${historial})}"></th:block>
+        </section>
+
+        <p class="link-secondary"><a th:href="@{/contador/inicio}">&larr; Volver al panel</a></p>
+      </main>
+    </div>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

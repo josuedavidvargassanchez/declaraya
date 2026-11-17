@@ -1,0 +1,24 @@
+<!-- historial de mentoria de un practicante (MentoriaService.historial): solicitudes, asignaciones y cambios en sus acuerdos -->
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="historial(eventos)">
+    <div class="list">
+        <div class="list-item evento-mentoria" th:each="ev : ${eventos}">
+            <span class="list-meta evento-fecha" th:text="${#temporals.format(ev.fecha, 'dd/MM/yyyy HH:mm')}">01/01/2026</span>
+            <span class="chip chip-suave" th:text="${ev.categoria}">Solicitud</span>
+            <div class="doc-info">
+                <strong th:text="${ev.titulo}">Título</strong>
+                <span class="list-meta" th:if="${ev.detalle != null}" th:text="${ev.detalle}">Detalle</span>
+            </div>
+        </div>
+        <p class="empty" th:if="${eventos.isEmpty()}">Todavía no hay movimientos de mentoría.</p>
+    </div>
+</th:block>
+
+<!-- tarjeta de un mentor: foto, nombre, especialidades y numero de practicantes -->
+<div xmlns:th="http://www.thymeleaf.org" th:fragment="mentor(m, practicantes)" class="card-persona">
+    <span th:replace="~{fragments/avatar :: avatar(${m})}"></span>
+    <div>
+        <p class="card-title"><a th:href="@{'/contadores/' + ${m.id}}" th:text="${m.nombre}">Mentor</a></p>
+        <p class="card-subtitle" th:if="${practicantes != null}"
+           th:text="${practicantes == 1 ? '1 practicante asignado' : practicantes + ' practicantes asignados'}">0 practicantes</p>
+    </div>
+</div>

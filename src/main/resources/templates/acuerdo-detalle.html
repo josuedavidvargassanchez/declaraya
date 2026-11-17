@@ -1,0 +1,382 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Detalle del acuerdo</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('acuerdos')}"></aside>
+
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <h2 th:text="${'Acuerdo #' + acuerdo.id}">Acuerdo #1</h2>
+            <p class="page-lead" th:text="${solicitud.titulo + (solicitud.anioGravable != null ? ' · año gravable ' + solicitud.anioGravable : '')}">Servicio</p>
+          </div>
+          <div class="meta-row">
+            <span th:class="${'badge badge-' + #strings.toLowerCase(acuerdo.estado.name())}" th:text="${acuerdo.estado}">ACTIVO</span>
+            <span class="tag" th:if="${acuerdo.etapa != null}" th:text="${acuerdo.etapa.etiqueta}">Etapa</span>
+            <span class="badge badge-rechazado" th:if="${disputaActiva}">En disputa</span>
+          </div>
+        </div>
+
+        <p class="success" th:if="${param.mentorAprobo}">Aprobaste el caso. El practicante ya puede trabajar en él.</p>
+        <p class="success" th:if="${param.documentoPedido}">Documento solicitado. Le avisamos al cliente.</p>
+        <p class="success" th:if="${param.preparacionIniciada}">Preparación iniciada.</p>
+        <p class="success" th:if="${param.trabajoEntregado}">Trabajo entregado.</p>
+        <p class="success" th:if="${param.entregaAprobada}">Entrega aprobada y enviada al cliente.</p>
+        <p class="success" th:if="${param.correccionPedida}">Corrección solicitada al practicante.</p>
+        <p class="success" th:if="${param.recepcionConfirmada}">Recepción confirmada. El acuerdo quedó finalizado.</p>
+        <p class="success" th:if="${param.calificado}">¡Gracias por calificar!</p>
+        <p class="success" th:if="${param.documentoSubido}">Documento subido.</p>
+        <p class="success" th:if="${param.documentoReemplazado}">Archivo reemplazado.</p>
+        <p class="success" th:if="${param.documentoVinculado}">Solicitud relacionada actualizada.</p>
+        <p class="success" th:if="${param.documentoEliminado}">Documento eliminado.</p>
+        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+        <p class="error" th:if="${param.errorDocumento}" th:text="${param.errorDocumento}">Error</p>
+        <div class="banner-warning" th:if="${param.inconvenienteReportado}">
+          Reportaste un inconveniente y el contador fue notificado. Si no logran solucionarlo,
+          puedes <a th:href="@{'/acuerdos/' + ${acuerdo.id} + '/chat'}">abrir una disputa desde el chat del acuerdo</a>.
+        </div>
+
+        <!-- indicador de etapas -->
+        <ol class="etapas-progreso" aria-label="Etapas del acuerdo">
+          <li th:each="e, it : ${etapas}"
+              th:classappend="${it.index < indiceEtapa ? 'hecho' : (it.index == indiceEtapa ? 'actual' : '')}"
+              th:text="${e.etiqueta}">Etapa</li>
+        </ol>
+
+        <section class="detalle-bloque">
+          <h3>Datos del acuerdo</h3>
+          <dl class="ficha">
+            <dt>Número</dt><dd th:text="${'#' + acuerdo.id}">-</dd>
+            <dt>Servicio</dt>
+            <dd th:text="${solicitud.titulo + (solicitud.anioGravable != null ? ' (año gravable ' + solicitud.anioGravable + ')' : '')}">-</dd>
+            <dt>Cliente</dt><dd th:text="${cliente.nombre}">-</dd>
+            <dt>Contador</dt>
+            <dd>
+              <a th:href="@{'/contadores/' + ${contador.id}}" th:text="${contador.nombre}">Contador</a>
+              <span class="list-meta" th:text="${'(' + contador.rol.etiqueta + ')'}">rol</span>
+            </dd>
+            <dt>Valor</dt>
+            <dd th:text="${acuerdo.oferta.valorPropuesto != null ? '$ ' + #numbers.formatDecimal(acuerdo.oferta.valorPropuesto, 1, 'POINT', 0, 'COMMA') : 'No registrado'}">-</dd>
+            <dt>Comisión de la plataforma</dt>
+            <dd th:text="${acuerdo.comisionPlataforma != null ? '$ ' + #numbers.formatDecimal(acuerdo.comisionPlataforma, 1, 'POINT', 0, 'COMMA') : 'No registrado'}">-</dd>
+            <dt>Fecha de inicio</dt>
+            <dd th:text="${acuerdo.fechaCreacion != null ? #temporals.format(acuerdo.fechaCreacion, 'dd/MM/yyyy') : 'No registrado'}">-</dd>
+            <dt>Fecha estimada de entrega</dt>
+            <dd>
+              <span th:text="${acuerdo.fechaEntregaEstimada != null ? #temporals.format(acuerdo.fechaEntregaEstimada, 'dd/MM/yyyy') : 'No registrada'}">-</span>
+              <span class="list-meta" th:if="${acuerdo.diasRestantes != null and acuerdo.estado.name() == 'ACTIVO'}"
+                    th:text="${acuerdo.diasRestantes > 0 ? '(faltan ' + acuerdo.diasRestantes + ' días)' : (acuerdo.diasRestantes == 0 ? '(vence hoy)' : '(vencida hace ' + (-acuerdo.diasRestantes) + ' días)')}"></span>
+            </dd>
+            <dt>Estado</dt><dd th:text="${acuerdo.estado}">-</dd>
+            <dt>Etapa</dt><dd th:text="${acuerdo.etapa != null ? acuerdo.etapa.etiqueta : 'No registrada'}">-</dd>
+            <th:block th:if="${supervision != null}">
+              <dt>Mentor</dt><dd th:text="${supervision.mentor.nombre}">Mentor</dd>
+            </th:block>
+            <th:block th:if="${supervision != null and contador.mentor != null and contador.mentor.id != supervision.mentor.id}">
+              <dt>Mentor actual del practicante</dt><dd th:text="${contador.mentor.nombre}">Mentor actual</dd>
+            </th:block>
+          </dl>
+        </section>
+
+        <!-- acciones segun rol y etapa -->
+        <section class="detalle-bloque">
+          <h3>Acciones</h3>
+          <div class="row-actions">
+            <button type="button" data-abrir-modal="modal-aprobar-caso"
+                    th:if="${esMentor and supervision != null and supervision.estado.name() == 'PENDIENTE_APROBACION'}">Aprobar caso del practicante</button>
+            <button type="button" class="btn-muted" data-abrir-modal="modal-pedir-documento" th:if="${puedePedirDocumento}">Solicitar documento</button>
+            <button type="button" data-abrir-modal="modal-preparacion" th:if="${puedeIniciarPreparacion}">Iniciar preparación</button>
+            <button type="button" data-abrir-modal="modal-entregar" th:if="${puedeEntregar}">Entregar trabajo</button>
+            <th:block th:if="${puedeRevisarComoMentor}">
+              <button type="button" data-abrir-modal="modal-aprobar-entrega">Aprobar entrega</button>
+              <button type="button" class="btn-muted" data-abrir-modal="modal-corregir-entrega">Solicitar corrección</button>
+            </th:block>
+            <th:block th:if="${puedeResponderEntrega}">
+              <button type="button" data-abrir-modal="modal-recepcion">Confirmar recepción</button>
+              <button type="button" class="btn-danger" data-abrir-modal="modal-inconveniente">Reportar inconveniente</button>
+            </th:block>
+            <button type="button" data-abrir-modal="modal-calificar" th:if="${puedeCalificar}">Calificar contador</button>
+            <a th:href="@{'/acuerdos/' + ${acuerdo.id} + '/chat'}" class="btn btn-muted">Abrir chat</a>
+            <a th:href="@{'/acuerdos/' + ${acuerdo.id} + '/documento'}" class="btn btn-muted">Ver constancia</a>
+          </div>
+          <p class="hint" th:if="${esContador and acuerdo.etapa != null and acuerdo.etapa.name() == 'APROBACION_MENTOR'}">
+            Tu mentor debe aprobar este caso antes de empezar.</p>
+          <p class="hint" th:if="${esContador and acuerdo.etapa != null and acuerdo.etapa.name() == 'REVISION_MENTOR'}">
+            Tu entrega está en revisión por tu mentor.</p>
+        </section>
+
+        <!-- documentos -->
+        <section class="detalle-bloque">
+          <div class="content-header seccion-con-enlace">
+            <h3>Documentos de la solicitud</h3>
+            <button type="button" class="btn-small" data-abrir-modal="modal-doc-subir" th:if="${puedeSubirDocumentos}">
+              <span th:replace="~{fragments/icons :: i('plus')}"></span> Subir documento</button>
+          </div>
+          <th:block th:replace="~{fragments/checklist :: checklist(${checklist}, ${requerimientos}, ${puedeSubirDocumentos})}"></th:block>
+          <p class="detalle-etiqueta">Documentos cargados</p>
+          <th:block th:replace="~{fragments/documentos :: lista(${documentos}, ${esCliente}, ${'/acuerdos/' + acuerdo.id}, 'El cliente aún no ha compartido documentos.')}"></th:block>
+        </section>
+
+        <!-- entregas -->
+        <section class="detalle-bloque">
+          <h3>Entregas del trabajo</h3>
+          <div class="list">
+            <div class="list-item entrega-item" th:each="e : ${entregas}">
+              <div class="doc-info">
+                <strong th:text="${e.nombreOriginal}">archivo.pdf</strong>
+                <span class="list-meta" th:text="${'Entregado por ' + e.contador.nombre + ' el ' + #temporals.format(e.fecha, 'dd/MM/yyyy HH:mm')}">Fecha</span>
+                <span th:text="${e.descripcion}">Descripción</span>
+                <span class="list-meta" th:if="${e.observacionMentor != null}" th:text="${'Observación del mentor: ' + e.observacionMentor}"></span>
+                <span class="list-meta" th:if="${e.observacionCliente != null}" th:text="${'Inconveniente reportado: ' + e.observacionCliente}"></span>
+              </div>
+              <span th:class="${'badge badge-' + #strings.toLowerCase(e.estado.name())}" th:text="${e.estado.etiqueta}">Estado</span>
+              <span class="inline-actions doc-acciones">
+                <a th:href="@{'/acuerdos/' + ${acuerdo.id} + '/entregas/' + ${e.id}}" target="_blank" rel="noopener" class="btn btn-small btn-muted">Ver</a>
+                <a th:href="@{'/acuerdos/' + ${acuerdo.id} + '/entregas/' + ${e.id} + '/descargar'}" class="btn btn-small btn-muted">Descargar</a>
+              </span>
+            </div>
+            <p class="empty" th:if="${entregas.isEmpty()}">Aún no hay entregas.</p>
+          </div>
+        </section>
+
+        <!-- calificacion -->
+        <section class="detalle-bloque" th:if="${calificacion != null}">
+          <h3>Calificación</h3>
+          <p>
+            <span class="estrellas" th:text="${#strings.repeat('★', calificacion.puntaje) + #strings.repeat('☆', 5 - calificacion.puntaje)}">★★★★★</span>
+            <span class="list-meta" th:text="${calificacion.puntaje + ' de 5 · ' + #temporals.format(calificacion.fecha, 'dd/MM/yyyy')}"></span>
+          </p>
+          <p th:if="${calificacion.comentario != null and !calificacion.oculta}" th:text="${calificacion.comentario}">Comentario</p>
+          <p class="hint" th:if="${calificacion.oculta}">El comentario fue ocultado por la administración.</p>
+        </section>
+
+        <!-- historial -->
+        <section class="detalle-bloque">
+          <h3>Historial</h3>
+          <div class="tabla-wrap">
+            <table class="tabla">
+              <thead><tr><th>Fecha y hora</th><th>Quién</th><th>Actividad</th><th>Detalle</th></tr></thead>
+              <tbody>
+                <tr th:each="a : ${actividades}">
+                  <td th:text="${#temporals.format(a.fecha, 'dd/MM/yyyy HH:mm')}">fecha</td>
+                  <td th:text="${a.actor != null ? a.actor.nombre : 'Sistema'}">actor</td>
+                  <td th:text="${a.tipo.etiqueta}">tipo</td>
+                  <td class="celda-detalle" th:text="${a.descripcion != null ? a.descripcion : '—'}">detalle</td>
+                </tr>
+                <tr th:if="${actividades.isEmpty()}">
+                  <td colspan="4" class="empty-celda">Sin actividades registradas (acuerdo anterior a este historial).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <p class="link-secondary"><a th:href="@{/acuerdos}">&larr; Volver a mis acuerdos</a></p>
+      </main>
+    </div>
+
+    <!-- ===================== modales ===================== -->
+
+    <th:block th:if="${esCliente}">
+      <th:block th:replace="~{fragments/documentos :: modales(${solicitud.id}, ${'/acuerdos/' + acuerdo.id})}"></th:block>
+    </th:block>
+
+    <th:block th:if="${esMentor and supervision != null and supervision.estado.name() == 'PENDIENTE_APROBACION'}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-aprobar-caso', 'Aprobar caso del practicante', ~{::#form-aprobar-caso})}">
+        <form id="form-aprobar-caso" th:action="@{'/contador/supervisiones/' + ${supervision.id} + '/aprobar'}" method="post">
+          <div class="modal-cuerpo">
+            <input type="hidden" name="volver" value="detalle">
+            <p>El caso pasará de <strong>Aprobación del mentor</strong> a <strong>Documentación</strong> y tu practicante podrá empezar a trabajar.</p>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" required data-confirmacion>
+              <span>Confirmo que revisé el caso y apruebo que mi practicante lo atienda</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Aprobar caso</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <th:block th:if="${puedePedirDocumento}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-pedir-documento', 'Solicitar documento al cliente', ~{::#form-pedir-documento})}">
+        <form id="form-pedir-documento" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/requerimientos'}" method="post">
+          <div class="modal-cuerpo">
+            <label for="req-nombre">Documento que necesitas</label>
+            <input type="text" id="req-nombre" name="nombre" required maxlength="120" placeholder="Ej.: Certificado de la cuenta de ahorros">
+            <label for="req-descripcion">Detalle (opcional)</label>
+            <textarea id="req-descripcion" name="descripcion" rows="3" th:maxlength="${textoMax}"></textarea>
+            <p class="hint">El cliente recibirá una notificación y podrá subirlo desde este acuerdo. Mientras esté pendiente no se puede iniciar la preparación.</p>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Solicitar documento</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <th:block th:if="${puedeIniciarPreparacion}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-preparacion', 'Iniciar preparación', ~{::#form-preparacion})}">
+        <form id="form-preparacion" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/preparacion'}" method="post">
+          <div class="modal-cuerpo">
+            <p>El acuerdo pasará de <strong>Documentación</strong> a <strong>Preparación</strong>.</p>
+            <div class="banner-rechazo" th:if="${requerimientosPendientes > 0}">
+              Hay <strong th:text="${requerimientosPendientes}">1</strong> documento(s) solicitado(s) pendiente(s).
+              No puedes iniciar la preparación hasta que el cliente los suba.
+            </div>
+            <div class="banner-warning" th:if="${!faltantes.isEmpty()}">
+              <strong>Faltan documentos obligatorios del trámite:</strong>
+              <ul><li th:each="f : ${faltantes}" th:text="${f}">Documento</li></ul>
+              Puedes continuar si ya los tienes por otro medio.
+            </div>
+            <label class="check-item modal-confirmacion" th:if="${requerimientosPendientes == 0}">
+              <input type="checkbox" required data-confirmacion>
+              <span>Confirmo que tengo la información necesaria para preparar el trámite</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled th:if="${requerimientosPendientes == 0}">Iniciar preparación</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <th:block th:if="${puedeEntregar}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-entregar', 'Entregar trabajo', ~{::#form-entregar})}">
+        <form id="form-entregar" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/entregas'(_csrf=${_csrf.token})}" method="post" enctype="multipart/form-data">
+          <div class="modal-cuerpo">
+            <p th:if="${contador.rol.name() == 'CONTADOR_PRACTICANTE'}">Tu entrega irá primero a tu mentor para revisión.</p>
+            <p th:unless="${contador.rol.name() == 'CONTADOR_PRACTICANTE'}">El cliente recibirá la entrega y podrá confirmar la recepción.</p>
+            <label for="entrega-descripcion">Descripción de lo que entregas</label>
+            <textarea id="entrega-descripcion" name="descripcion" rows="4" required th:maxlength="${descripcionMax}"></textarea>
+            <label for="entrega-archivo">Archivo (PDF, JPG o PNG de máximo 10 MB)</label>
+            <input type="file" id="entrega-archivo" name="archivo" accept=".pdf,.jpg,.jpeg,.png" required>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" required data-confirmacion>
+              <span>Confirmo que este es el trabajo que entrego para este acuerdo</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Entregar trabajo</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <th:block th:if="${puedeRevisarComoMentor}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-aprobar-entrega', 'Aprobar entrega', ~{::#form-aprobar-entrega})}">
+        <form id="form-aprobar-entrega" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/entregas/' + ${entregaEnRevision.id} + '/aprobar'}" method="post">
+          <div class="modal-cuerpo">
+            <p>La entrega se enviará al cliente y el acuerdo pasará a <strong>Entregado</strong>.</p>
+            <label for="aprobar-observacion">Observación (opcional)</label>
+            <textarea id="aprobar-observacion" name="observacion" rows="2" th:maxlength="${textoMax}"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que revisé el trabajo del practicante</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Aprobar entrega</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog th:replace="~{fragments/modal :: modal('modal-corregir-entrega', 'Solicitar corrección', ~{::#form-corregir-entrega})}">
+        <form id="form-corregir-entrega" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/entregas/' + ${entregaEnRevision.id} + '/correccion'}" method="post">
+          <div class="modal-cuerpo">
+            <p>El acuerdo volverá a <strong>Preparación</strong> y el practicante verá tu observación.</p>
+            <label for="corregir-observacion">¿Qué debe corregir? (obligatorio)</label>
+            <textarea id="corregir-observacion" name="observacion" rows="3" required th:maxlength="${textoMax}"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que revisé el trabajo del practicante</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Solicitar corrección</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <th:block th:if="${puedeResponderEntrega}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-recepcion', 'Confirmar recepción', ~{::#form-recepcion})}">
+        <form id="form-recepcion" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/entregas/' + ${entregaEnviada.id} + '/recepcion'}" method="post">
+          <div class="modal-cuerpo">
+            <p>El acuerdo quedará <strong>finalizado</strong> y podrás calificar al contador.</p>
+            <p class="aviso-dian">Confirmar la recepción no equivale a la aceptación del trámite por parte de la DIAN.</p>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que recibí el trabajo</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Confirmar recepción</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog th:replace="~{fragments/modal :: modal('modal-inconveniente', 'Reportar inconveniente', ~{::#form-inconveniente})}">
+        <form id="form-inconveniente" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/entregas/' + ${entregaEnviada.id} + '/inconveniente'}" method="post">
+          <div class="modal-cuerpo">
+            <p>El acuerdo volverá a <strong>Preparación</strong> y el contador recibirá tu reporte. Si no se soluciona, podrás abrir una disputa.</p>
+            <p class="aviso-dian">Confirmar la recepción no equivale a la aceptación del trámite por parte de la DIAN.</p>
+            <label for="inconveniente-descripcion">Describe el inconveniente (obligatorio)</label>
+            <textarea id="inconveniente-descripcion" name="descripcion" rows="3" required th:maxlength="${textoMax}"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que quiero reportar este inconveniente</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" class="btn-danger" data-confirmar disabled>Reportar inconveniente</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <th:block th:if="${puedeCalificar}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-calificar', 'Calificar contador', ~{::#form-calificar})}">
+        <form id="form-calificar" th:action="@{'/acuerdos/' + ${acuerdo.id} + '/calificacion'}" method="post">
+          <div class="modal-cuerpo">
+            <p th:text="${'¿Cómo fue tu experiencia con ' + contador.nombre + '?'}">Pregunta</p>
+            <fieldset class="estrellas-campo">
+              <legend>Puntaje</legend>
+              <label class="check-item" th:each="n : ${#numbers.sequence(5, 1)}">
+                <input type="radio" name="puntaje" th:value="${n}" required>
+                <span th:text="${#strings.repeat('★', n) + ' (' + n + ')'}">★★★★★</span>
+              </label>
+            </fieldset>
+            <label for="calificar-comentario">Comentario (opcional, máximo 500 caracteres)</label>
+            <textarea id="calificar-comentario" name="comentario" rows="3" maxlength="500"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo mi calificación (no se puede cambiar después)</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Enviar calificación</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>
