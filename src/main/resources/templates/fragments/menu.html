@@ -1,5 +1,5 @@
 <div xmlns:th="http://www.thymeleaf.org" th:fragment="menu(activo)" class="navbar">
-    <a class="brand" th:href="@{/inicio}"><span class="brand-mark">D</span>DeclaraYa</a>
+    <a class="brand" th:href="@{/inicio}"><span class="brand-mark">C</span>Contapuente</a>
     <nav class="nav-links">
         <a th:if="${navRol != null}" th:href="@{/notificaciones}" class="nav-bell" title="Notificaciones">
             <span th:replace="~{fragments/icons :: i('bell')}"></span><span class="bell-dot" th:if="${notifCount != null and notifCount > 0}" th:text="${notifCount}">1</span>

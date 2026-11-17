@@ -1,4 +1,4 @@
-# DeclaraYa
+# Contapuente
 
 Plataforma que conecta personas naturales con contadores públicos y practicantes para la declaración de renta.
 Spring Boot 4 · Java 21 · MySQL · Thymeleaf · Spring Security.
@@ -166,7 +166,7 @@ Un único método, `DocumentoClienteService.puedeVer`, decide el acceso en todas
 
 ### Perfil público, calificaciones y notificaciones
 - **Mi perfil (contador):** se agregan especialidades (trámites del catálogo) y años de experiencia (0 a 60).
-- **Perfil público `/contadores/{id}`:** foto, tipo, insignia "Verificado por DeclaraYa" (solo si está aprobado), TP, mentor, especialidades, experiencia, descripción, tarifa, promedio, acuerdos finalizados y últimas reseñas. Nunca muestra correo, teléfono, documento ni archivos. Se enlaza desde las ofertas y desde el detalle del acuerdo.
+- **Perfil público `/contadores/{id}`:** foto, tipo, insignia "Verificado por Contapuente" (solo si está aprobado), TP, mentor, especialidades, experiencia, descripción, tarifa, promedio, acuerdos finalizados y últimas reseñas. Nunca muestra correo, teléfono, documento ni archivos. Se enlaza desde las ofertas y desde el detalle del acuerdo.
 - **Calificación (`calificaciones`, una por acuerdo):** solo la persona del acuerdo califica, una vez y con el acuerdo finalizado. El admin, en `/admin/calificaciones`, puede ocultar un comentario con un motivo obligatorio; la calificación no se borra y deja de contar en el promedio.
 - **Notificaciones:**
   - Se envían cuando se crea un acuerdo (a ambas partes), cuando se pide o se sube un documento, cuando hay una entrega enviada o por revisar, cuando se pide una corrección, cuando se confirma la recepción o se reporta un inconveniente, cuando se abre o resuelve una disputa y cuando llega una nueva calificación.
