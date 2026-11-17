@@ -10,6 +10,7 @@ import com.example.declaraya.models.SolicitudDeclaracion;
 import com.example.declaraya.models.Usuario;
 import com.example.declaraya.services.AcuerdoService;
 import com.example.declaraya.services.FlujoAcuerdoService;
+import com.example.declaraya.services.MentoriaService;
 import com.example.declaraya.services.NotificacionService;
 import com.example.declaraya.services.OfertaService;
 import com.example.declaraya.services.SolicitudDeclaracionService;
@@ -26,7 +27,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 @Controller
@@ -52,6 +52,9 @@ public class OfertaController {
 
     @Autowired
     private FlujoAcuerdoService flujoService;
+
+    @Autowired
+    private MentoriaService mentoriaService;
 
     private Usuario usuarioActual(Authentication authentication) {
         return usuarioService.buscarPorEmail(authentication.getName())
@@ -98,7 +101,7 @@ public class OfertaController {
         List<Oferta> ofertasContador = ofertaService.listarPorContador(contador);
         model.addAttribute("misOfertas", ofertasContador);
         resumenOfertas(model, ofertasContador);
-        model.addAttribute("practicantes", usuarioService.listarPracticantesDe(contador));
+        model.addAttribute("practicantes", mentoriaService.resumenPracticantes(contador));
         model.addAttribute("practicantesSupervisados", supervisionService.listarPorMentor(contador));
         model.addAttribute("entregasPorRevisar", flujoService.entregasPorRevisar(contador));
         return "inicio-contador";
@@ -113,19 +116,12 @@ public class OfertaController {
         model.addAttribute("misOfertas", ofertasPracticante);
         resumenOfertas(model, ofertasPracticante);
         model.addAttribute("supervisiones", supervisionService.listarPorPracticante(practicante));
-        model.addAttribute("mentoresDisponibles", usuarioService.listarMentoresDisponibles());
+        model.addAttribute("solicitudMentoriaPendiente", mentoriaService.solicitudPendiente(practicante).isPresent());
         model.addAttribute("casosActivos", acuerdoService.contarActivosDe(practicante));
         return "inicio-practicante";
     }
 
-    @PostMapping("/practicante/mentor")
-    public String elegirMentor(@RequestParam Long mentorId, Authentication authentication) {
-        Usuario practicante = usuarioActual(authentication);
-        if (practicante.getMentor() == null) {
-            usuarioService.asignarMentor(practicante, mentorId);
-        }
-        return "redirect:/practicante/inicio";
-    }
+    // el practicante ya no elige mentor: lo solicita en /practicante/mentor y lo asigna el administrador
 
     // el practicante tambien usa este endpoint; su oferta queda igual, pero el
     // acuerdo que resulte debera pasar por Supervision antes de darse por valido

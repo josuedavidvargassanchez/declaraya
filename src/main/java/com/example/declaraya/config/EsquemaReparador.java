@@ -64,5 +64,16 @@ public class EsquemaReparador implements CommandLineRunner {
         } catch (Exception e) {
             System.out.println("Aviso: no se pudo migrar la etapa de los acuerdos: " + e.getMessage());
         }
+
+        // entregas de practicantes anteriores al campo mentor_id: su revisor es el mentor de la supervision
+        try {
+            int migradas = jdbc.update("UPDATE entregas_trabajo e JOIN supervisiones s ON s.acuerdo_id = e.acuerdo_id "
+                    + "SET e.mentor_id = s.mentor_id WHERE e.mentor_id IS NULL");
+            if (migradas > 0) {
+                System.out.println("Mentor revisor asignado a " + migradas + " entregas existentes.");
+            }
+        } catch (Exception e) {
+            System.out.println("Aviso: no se pudo migrar el mentor de las entregas: " + e.getMessage());
+        }
     }
 }

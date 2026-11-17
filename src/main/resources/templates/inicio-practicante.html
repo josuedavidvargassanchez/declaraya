@@ -27,31 +27,9 @@
           <strong th:text="${usuario.mentor.nombre}">Mentor</strong>
         </div>
 
-        <div th:if="${usuario.mentor == null}">
-          <h2>Elige tu mentor</h2>
-          <form
-            th:action="@{/practicante/mentor}"
-            method="post"
-            class="inline-form"
-          >
-            <select name="mentorId" required>
-              <option
-                th:each="m : ${mentoresDisponibles}"
-                th:value="${m.id}"
-                th:text="${m.nombre}"
-              ></option>
-            </select>
-            <button
-              type="submit"
-              class="btn-small"
-              th:disabled="${mentoresDisponibles.isEmpty()}"
-            >
-              Elegir mentor
-            </button>
-          </form>
-          <p th:if="${mentoresDisponibles.isEmpty()}" class="empty">
-            Todavia no hay contadores verificados disponibles como mentores.
-          </p>
+        <div class="banner-warning" th:if="${usuario.mentor == null}">
+          <span th:text="${solicitudMentoriaPendiente} ? 'Tu solicitud de mentoría está pendiente de revisión por el administrador. Podrás ofertar cuando te asigne un mentor.' : 'Aún no tienes un mentor asignado, así que no puedes ofertar.'">Sin mentor</span>
+          <a th:href="@{/practicante/mentor}" class="btn btn-small">Ir a Mi mentor</a>
         </div>
 
         <p class="success" th:if="${param.ofertaEnviada}">
@@ -63,7 +41,7 @@
           Tu cuenta debe estar verificada para ofertar.
         </p>
         <p class="error" th:if="${param.errorMentor}">
-          Debes elegir un mentor antes de ofertar.
+          Necesitas un mentor asignado antes de ofertar. Solicítalo en Mi mentor.
         </p>
         <p class="error" th:if="${param.errorCasoActivo}">
           Ya tienes un caso activo; finalizalo antes de tomar otro.

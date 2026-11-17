@@ -17,7 +17,7 @@ Apagar: `docker compose down` (conserva datos) o `docker compose down -v` (los b
 ## Roles
 - **PERSONA**: publica solicitudes, recibe ofertas, acepta una y chatea con el contador.
 - **CONTADOR_PUBLICO**: envía ofertas (requiere verificación del admin) y supervisa practicantes.
-- **CONTADOR_PRACTICANTE**: envía ofertas bajo la supervisión de un mentor (un caso activo a la vez).
+- **CONTADOR_PRACTICANTE**: envía ofertas bajo la supervisión de un mentor que asigna el administrador (un caso activo a la vez).
 - **ADMIN**: revisa y verifica contadores, resuelve disputas y ve el panel de datos (ver "Revisión del administrador").
 
 ## Novedades
@@ -202,6 +202,93 @@ Un único método, `DocumentoClienteService.puedeVer`, decide el acceso en todas
 3. Como cliente, pulsa **Confirmar recepción** y después **Calificar contador**. La reseña aparece en `/contadores/{id}`.
 4. **Practicante:** repite el flujo ofertando con `camila.herrera@example.com`. Su mentor `mauricio.salazar@example.com` aprueba el caso, pide una corrección de la entrega (el practicante la ve y vuelve a entregar) y luego la aprueba.
 5. **Admin:** como `admin@declaraya.com`, en **Calificaciones** pulsa "Ocultar comentario" con un motivo.
+
+## Mentorías de practicantes
+
+"Mentor" no es un rol: es un `CONTADOR_PUBLICO` con la verificación `APROBADO` que tiene practicantes asignados. `Usuario.mentor` sigue siendo la fuente de verdad. Solo cambia en `UsuarioService.asignarMentor`, y solo la llama `MentoriaService` cuando el administrador aprueba una solicitud o hace un cambio. No hay límite de practicantes por mentor.
+
+### Flujo
+- **Practicante ("Mi mentor", `/practicante/mentor`)**: ya no elige mentor (se eliminó `POST /practicante/mentor`).
+  - Sin mentor, puede **solicitar uno**: especialidad del catálogo de trámites y mensaje. Solo si su verificación está `APROBADO`.
+  - Con mentor, ve su foto, especialidades y fecha de asignación, y puede **solicitar un cambio** (motivo obligatorio y especialidad opcional).
+  - Si tiene una solicitud pendiente, la ve y puede cancelarla. Si la última fue rechazada, ve el motivo.
+  - Siempre ve su historial.
+  - Solo puede tener **una solicitud pendiente**, y solo ve y cancela las suyas (403 en otro caso).
+- **Administrador ("Gestión de mentorías", `/admin/mentorias`)**: solicitudes pendientes, practicantes sin mentor, mentores con su número de practicantes e historial de asignaciones con filtro por practicante.
+  - En el detalle de una solicitud ve al practicante (con su verificación), el mensaje y, si es un cambio, el motivo y el mentor actual.
+  - También ve los mentores elegibles: contadores públicos aprobados, sin el mentor actual, con la etiqueta "Coincide con la especialidad".
+  - **Asignar** abre el modal "¿Desea asignar a {mentor} como mentor de {practicante}?", con observación opcional y confirmación obligatoria. En una sola transacción:
+    1. valida;
+    2. cierra la asignación vigente;
+    3. crea la nueva;
+    4. actualiza `Usuario.mentor`;
+    5. aprueba la solicitud;
+    6. traslada el trabajo pendiente;
+    7. notifica.
+  - **Rechazar** exige un motivo de 10 a 500 caracteres. En un cambio, el practicante conserva su mentor.
+  - **Cambio directo** desde la ficha del practicante (`/admin/mentorias/practicantes/{id}`, enlazada también desde "Editar usuario"): exige motivo y crea internamente una solicitud `CAMBIO` ya `APROBADA`, para que conste en el historial.
+  - En "Usuarios" ya no se elige mentor al crear o editar. Si alguien deja de ser practicante, se cierra su asignación vigente.
+- **Mentor ("Mis practicantes" en `/contador/inicio`)**: por cada practicante ve la verificación, la fecha de asignación, las entregas por revisar, las aprobadas, las correcciones pendientes y el botón "Ver supervisiones".
+  - `/contador/practicantes/{id}` muestra sus acuerdos, entregas e historial de supervisión. Es solo para el mentor vigente; cualquier otro recibe 403.
+  - La revisión de entregas sigue siendo la del detalle del acuerdo.
+  - El mentor no asigna practicantes ni modifica asignaciones.
+
+### Qué pasa con el trabajo pendiente al cambiar de mentor
+- Las `supervisiones` en `PENDIENTE_APROBACION` y las entregas en `EN_REVISION_MENTOR` pasan al mentor nuevo. Para eso `entregas_trabajo` tiene ahora `mentor_id`, el mentor que revisa la entrega.
+- Las supervisiones ya aprobadas conservan al mentor que las aprobó. Ese mentor sigue viendo esos acuerdos; los demás acuerdos del practicante dejan de ser visibles para él desde el cambio.
+- El mentor nuevo ve todos los acuerdos de su practicante y es quien actúa (aprobar casos, pedir documentos, revisar entregas).
+- Cada acuerdo afectado registra una actividad `CAMBIO_MENTOR` en su historial.
+
+### Notificaciones
+- **Practicante**: solicitud enviada, aprobada (con el nombre del mentor), rechazada (con el motivo) y cambio aplicado.
+- **Mentor nuevo**: practicante asignado, indicando cuántos pendientes recibe.
+- **Mentor anterior**: practicante retirado por el cambio.
+- **Mentor**, sobre entregas: entrega por revisar, o "reenvió la entrega corregida" cuando llega tras una corrección.
+- **Administradores**: nueva solicitud de mentoría o de cambio.
+
+### Rutas nuevas
+| Método | Ruta | Quién |
+|---|---|---|
+| GET | `/practicante/mentor` | Practicante |
+| POST | `/practicante/mentor/solicitudes` · `/practicante/mentor/cambio` | Practicante (verificado) |
+| POST | `/practicante/mentor/solicitudes/{id}/cancelar` | Practicante dueño de la solicitud |
+| GET | `/admin/mentorias?practicante={id}` | Admin |
+| GET | `/admin/mentorias/{id}` | Admin |
+| POST | `/admin/mentorias/{id}/asignar` · `/rechazar` | Admin (con confirmación) |
+| GET | `/admin/mentorias/practicantes/{id}` | Admin |
+| POST | `/admin/mentorias/practicantes/{id}/cambiar` | Admin (motivo y confirmación) |
+| GET | `/contador/practicantes/{id}` | Mentor vigente del practicante |
+
+Se eliminó `POST /practicante/mentor` (autoelección).
+
+### Tablas y campos nuevos
+- **`solicitudes_mentoria`**: practicante, tipo (`NUEVA`, `CAMBIO`), especialidad, mensaje, motivo del cambio, mentor anterior, estado (`PENDIENTE`, `APROBADA`, `RECHAZADA`, `CANCELADA`), fecha, mentor asignado, admin que revisó, fecha de revisión (o de cancelación) y motivo del rechazo.
+- **`asignaciones_mentoria`**: practicante, mentor, solicitud (nula en las migradas), admin que asignó (nulo en las migradas: no se inventan revisores), inicio, fin (vacío mientras está vigente) y observación.
+- **`entregas_trabajo.mentor_id`**: revisor de la entrega.
+- **`actividades_acuerdo.tipo`**: nuevo valor `CAMBIO_MENTOR`.
+- Ninguna de estas tablas tiene rutas para editar ni borrar. El historial de mentoría se arma con ellas más `actividades_acuerdo`.
+
+### Migración al arrancar
+- `MigracionMentorias` crea la asignación vigente, con la nota "Asignación previa al flujo de solicitudes" y fecha de inicio de hoy, para cada practicante que ya tenía mentor y no la tenía.
+- También cierra las asignaciones vigentes que ya no coinciden con `Usuario.mentor`.
+- `EsquemaReparador` completa `entregas_trabajo.mentor_id` de las entregas existentes con el mentor de la supervisión.
+- `DemoDataSeeder` registra las asignaciones de los practicantes de ejemplo con fecha 02/01/2026, anterior a los acuerdos de ejemplo.
+- `DemoDataSeeder` también deja un caso de Camila Herrera esperando la aprobación de su mentor, para probar el traslado.
+
+### Cómo probarlo (clave `demo1234`)
+1. Entra como `esteban.arias@example.com` (practicante sin mentor y sin verificar). En **Mi mentor** verás "Tu cuenta debe estar verificada para solicitar un mentor". Sube el soporte en **Mi perfil**.
+2. Entra como admin (`admin@declaraya.com` / `admin123`) y aprueba su verificación.
+3. Vuelve como Esteban, pulsa **Solicitar mentor** y elige "Declaración de renta". Si intentas otra solicitud, se rechaza porque ya hay una pendiente.
+4. Como admin, en **Gestión de mentorías**, pulsa **Ver solicitud**, luego **Seleccionar** junto a Mauricio Salazar, y confirma.
+5. Como `mauricio.salazar@example.com`, Esteban aparece en **Mis practicantes**. Con **Ver supervisiones** se abre su ficha; con otro contador esa ruta da 403.
+6. Como `camila.herrera@example.com`, en **Mi mentor**, pulsa **Solicitar cambio de mentor**. Como admin, apruébalo eligiendo a otro mentor (por ejemplo Claudia Marcela Ortiz).
+7. Comprueba el traslado:
+   - El caso de Camila que esperaba aprobación pasa a la nueva mentora, que ya puede aprobarlo desde el detalle del acuerdo.
+   - Mauricio deja de ver ese acuerdo, pero sigue viendo los que aprobó.
+   - El historial del acuerdo muestra "Cambio de mentor".
+8. Pruebas automáticas:
+   - `MentoriaServiceTest` cubre: dos solicitudes pendientes, verificación pendiente, mentor no verificado, aprobar una solicitud rechazada, y cierre de la asignación anterior con traslado de supervisiones.
+   - `MentoriaControllerTest` cubre el 403 en `/contador/practicantes/{id}`.
 
 ## Datos de ejemplo y Power BI
 - Al arrancar por primera vez se cargan **datos ficticios** (10 contadores públicos, 8 practicantes, 16 clientes, 48 solicitudes con ofertas y acuerdos repartidos en 2026). Todas las cuentas de ejemplo usan la clave `demo1234` (por ejemplo `mauricio.salazar@example.com`). Para desactivarlos: `declaraya.demo-data=false`.

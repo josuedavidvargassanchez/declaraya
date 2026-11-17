@@ -49,8 +49,14 @@ public class UsuarioService {
         return usuarioRepository.findByRol(rol);
     }
 
+    /** Un mentor es un contador publico con la verificacion APROBADA (no es un rol aparte). */
+    public static boolean esMentorElegible(Usuario usuario) {
+        return usuario != null && usuario.getRol() == Rol.CONTADOR_PUBLICO
+                && usuario.getEstadoVerificacion() == EstadoVerificacion.APROBADO && usuario.isVerificado();
+    }
+
     public List<Usuario> listarMentoresDisponibles(){
-        return usuarioRepository.findByRol(Rol.CONTADOR_PUBLICO).stream().filter(Usuario::isVerificado)
+        return usuarioRepository.findByRol(Rol.CONTADOR_PUBLICO).stream().filter(UsuarioService::esMentorElegible)
         .toList();
     }
 
@@ -58,11 +64,15 @@ public class UsuarioService {
         return usuarioRepository.findByMentor(mentor);
     }
 
+    // solo lo usa MentoriaService al aprobar una solicitud o un cambio: nadie se asigna un mentor por su cuenta
     public Usuario asignarMentor (Usuario practicante, Long mentorId){
         Usuario mentor = usuarioRepository.findById(mentorId)
         .orElseThrow(() -> new RecursoNoEncontradoException("Mentor no encontrado"));
-        if (mentor.getRol() != Rol.CONTADOR_PUBLICO || !mentor.isVerificado()) {
-            throw new IllegalStateException("El mentor debe ser un contador publico verificadp");
+        if (practicante.getRol() != Rol.CONTADOR_PRACTICANTE) {
+            throw new ReglaNegocioException("Solo los contadores practicantes tienen mentor");
+        }
+        if (!esMentorElegible(mentor)) {
+            throw new ReglaNegocioException("El mentor debe ser un contador público con la verificación aprobada");
         }
         practicante.setMentor(mentor);
         return usuarioRepository.save(practicante);
@@ -81,7 +91,7 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
-    private void aplicarDatosAdmin(Usuario u, Rol rol, String tarjeta, Long mentorId, BigDecimal tarifa) {
+    private void aplicarDatosAdmin(Usuario u, Rol rol, String tarjeta, BigDecimal tarifa) {
         boolean eraContador = u.isContador();
         u.setRol(rol);
         boolean esContador = u.isContador();
@@ -96,14 +106,10 @@ public class UsuarioService {
             u.setFechaSolicitudVerificacion(LocalDateTime.now());
             u.setVerificado(false);
         }
-        // si ya era contador, su estado de verificacion solo cambia desde la pantalla de revision
-        if (rol == Rol.CONTADOR_PRACTICANTE && mentorId != null) {
-            Usuario mentor = buscarPorId(mentorId);
-            if (mentor.getRol() != Rol.CONTADOR_PUBLICO) {
-                throw new IllegalArgumentException("El mentor debe ser un contador público");
-            }
-            u.setMentor(mentor);
-        } else {
+        // si ya era contador, su estado de verificacion solo cambia desde la pantalla de revision.
+        // El mentor no se asigna aqui: solo desde "Gestión de mentorías" (MentoriaService); quien deja
+        // de ser practicante pierde el mentor y MentoriaService cierra su asignacion vigente
+        if (rol != Rol.CONTADOR_PRACTICANTE) {
             u.setMentor(null);
         }
         if (tarifa != null && tarifa.signum() >= 0) {
@@ -114,7 +120,7 @@ public class UsuarioService {
     // el administrador crea cuentas completas (incluso contadores ya verificados: en ese caso
     // queda registrado como quien aprobo la verificacion)
     public Usuario crearPorAdmin(String nombre, String email, String passwordPlano, Rol rol,
-                                  String tarjeta, boolean verificado, Long mentorId, BigDecimal tarifa,
+                                  String tarjeta, boolean verificado, BigDecimal tarifa,
                                   Usuario admin) {
         if (nombre == null || nombre.isBlank() || email == null || email.isBlank() || rol == null
                 || passwordPlano == null || passwordPlano.length() < 6) {
@@ -127,7 +133,7 @@ public class UsuarioService {
         u.setNombre(nombre.trim());
         u.setEmail(email.trim());
         u.setPassword(passwordEncoder.encode(passwordPlano));
-        aplicarDatosAdmin(u, rol, tarjeta, mentorId, tarifa);
+        aplicarDatosAdmin(u, rol, tarjeta, tarifa);
         if (u.isContador() && verificado) {
             LocalDateTime ahora = LocalDateTime.now();
             u.setEstadoVerificacion(EstadoVerificacion.APROBADO);
@@ -140,7 +146,7 @@ public class UsuarioService {
     }
 
     public Usuario actualizarPorAdmin(Long id, String nombre, String email, String passwordPlano, Rol rol,
-                                       String tarjeta, Long mentorId, BigDecimal tarifa) {
+                                       String tarjeta, BigDecimal tarifa) {
         Usuario u = buscarPorId(id);
         if (nombre == null || nombre.isBlank() || email == null || email.isBlank() || rol == null) {
             throw new IllegalArgumentException("Nombre, correo y rol son obligatorios");
@@ -157,7 +163,7 @@ public class UsuarioService {
             }
             u.setPassword(passwordEncoder.encode(passwordPlano));
         }
-        aplicarDatosAdmin(u, rol, tarjeta, mentorId, tarifa);
+        aplicarDatosAdmin(u, rol, tarjeta, tarifa);
         return usuarioRepository.save(u);
     }
 

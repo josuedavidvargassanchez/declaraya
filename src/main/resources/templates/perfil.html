@@ -149,7 +149,7 @@
                 <dt>Nombre</dt><dd th:text="${usuario.mentor.nombre}">Mentor</dd>
                 <dt>Correo</dt><dd th:text="${usuario.mentor.email}">correo</dd>
             </dl>
-            <p class="empty" th:if="${usuario.mentor == null}">Aún no tienes mentor. Elígelo desde tu <a th:href="@{/practicante/inicio}">panel</a>.</p>
+            <p class="empty" th:if="${usuario.mentor == null}">Aún no tienes mentor. Solicítalo desde <a th:href="@{/practicante/mentor}">Mi mentor</a>.</p>
         </section>
 
         <!-- ================= Verificacion (contadores) ================= -->

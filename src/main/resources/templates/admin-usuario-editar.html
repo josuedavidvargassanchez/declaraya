@@ -36,12 +36,12 @@
                     <div><label for="tarifaBase">Tarifa base (COP)</label>
                         <input type="number" id="tarifaBase" name="tarifaBase" min="0" step="1000"
                                th:value="${u.tarifaBase != null ? u.tarifaBase.toBigInteger() : ''}"></div>
-                    <div><label for="mentorId">Mentor (solo practicantes)</label>
-                        <select id="mentorId" name="mentorId">
-                            <option value="">Sin mentor</option>
-                            <option th:each="m : ${mentores}" th:value="${m.id}" th:text="${m.nombre}"
-                                    th:selected="${u.mentor != null and u.mentor.id == m.id}"></option>
-                        </select></div>
+                </div>
+                <div th:if="${u.rol.name() == 'CONTADOR_PRACTICANTE'}" class="estado-solo-lectura">
+                    <span class="detalle-etiqueta">Mentor</span>
+                    <span th:text="${u.mentor != null ? u.mentor.nombre : 'Sin mentor'}">Mentor</span>
+                    <a th:href="@{'/admin/mentorias/practicantes/' + ${u.id}}" class="btn btn-small btn-muted">Gestionar mentoría</a>
+                    <p class="hint">El mentor se asigna o se cambia desde Gestión de mentorías, para que quede en el historial.</p>
                 </div>
                 <div th:if="${u.contador}" class="estado-solo-lectura">
                     <span class="detalle-etiqueta">Estado de verificación</span>

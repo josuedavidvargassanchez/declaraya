@@ -47,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     form.setAttribute('action', boton.dataset.accion);
                 }
                 dialogo.querySelectorAll('[data-modal-doc]').forEach(el => { el.textContent = boton.dataset.doc || ''; });
+                // asignar o cambiar mentor: un solo modal, el boton "Seleccionar" indica el mentor elegido
+                const mentor = form ? form.querySelector('input[name="mentorId"]') : null;
+                if (mentor && boton.dataset.mentor) mentor.value = boton.dataset.mentor;
                 dialogo.showModal();
                 const selectSolicitud = form ? form.querySelector('select[name="solicitudId"]') : null;
                 if (selectSolicitud && boton.dataset.solicitud !== undefined) {

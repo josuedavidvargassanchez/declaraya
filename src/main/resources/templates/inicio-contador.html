@@ -141,16 +141,23 @@
 
         <h2>Mis practicantes</h2>
         <div class="list">
-          <div class="list-item" th:each="p : ${practicantes}">
-            <span th:text="${p.nombre}">Practicante</span>
-            <span
-              class="tag"
-              th:text="${p.verificado} ? 'Verificado' : 'Sin verificar'"
-              >Estado</span
-            >
+          <div class="list-item practicante-fila" th:each="fila : ${practicantes}">
+            <div class="doc-info">
+              <strong th:text="${fila.practicante.nombre}">Practicante</strong>
+              <span class="list-meta" th:text="${fila.fechaAsignacion != null ? 'Asignado el ' + #temporals.format(fila.fechaAsignacion, 'dd/MM/yyyy') : 'Fecha de asignación no registrada'}">Asignado</span>
+            </div>
+            <span th:if="${fila.practicante.estadoVerificacion != null}"
+                  th:class="${'badge badge-' + #strings.toLowerCase(fila.practicante.estadoVerificacion.name())}"
+                  th:text="${fila.practicante.estadoVerificacion.etiqueta}">Estado</span>
+            <span class="meta-row">
+              <span class="chip" th:classappend="${fila.porRevisar > 0} ? 'chip-urgente'" th:text="${'Por revisar: ' + fila.porRevisar}">Por revisar</span>
+              <span class="chip" th:text="${'Aprobadas: ' + fila.aprobadas}">Aprobadas</span>
+              <span class="chip" th:text="${'Correcciones pendientes: ' + fila.correccionesPendientes}">Correcciones</span>
+            </span>
+            <a th:href="@{'/contador/practicantes/' + ${fila.practicante.id}}" class="btn btn-small list-accion">Ver supervisiones</a>
           </div>
           <p th:if="${practicantes.isEmpty()}" class="empty">
-            Ningun practicante te ha elegido como mentor.
+            Aún no tienes practicantes asignados. El administrador los asigna desde la gestión de mentorías.
           </p>
         </div>
 

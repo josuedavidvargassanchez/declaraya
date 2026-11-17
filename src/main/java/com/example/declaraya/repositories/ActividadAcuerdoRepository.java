@@ -1,5 +1,6 @@
 package com.example.declaraya.repositories;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,4 +14,6 @@ public interface ActividadAcuerdoRepository extends JpaRepository<ActividadAcuer
     List<ActividadAcuerdo> findByAcuerdoOrderByFechaAscIdAsc(Acuerdo acuerdo);
 
     List<ActividadAcuerdo> findByAcuerdoAndTipo(Acuerdo acuerdo, TipoActividad tipo);
+
+    List<ActividadAcuerdo> findByAcuerdoInAndTipo(Collection<Acuerdo> acuerdos, TipoActividad tipo);
 }

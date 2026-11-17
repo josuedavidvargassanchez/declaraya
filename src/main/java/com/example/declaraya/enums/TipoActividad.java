@@ -3,6 +3,7 @@ package com.example.declaraya.enums;
 public enum TipoActividad {
     ACUERDO_CREADO("Acuerdo creado"),
     MENTOR_APROBO("Aprobación del mentor"),
+    CAMBIO_MENTOR("Cambio de mentor"),
     CAMBIO_ETAPA("Cambio de etapa"),
     DOCUMENTO_SUBIDO("Documento subido"),
     DOCUMENTO_SOLICITADO("Documento solicitado"),

@@ -1,0 +1,148 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Solicitud de mentoría</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('mentorias')}"></aside>
+
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <h2 th:text="${'Solicitud de mentoría #' + s.id}">Solicitud de mentoría</h2>
+            <p class="page-lead" th:text="${s.tipo.etiqueta + ' · ' + p.nombre}">Tipo · Practicante</p>
+          </div>
+          <span th:class="${'badge badge-' + #strings.toLowerCase(s.estado.name())}" th:text="${s.estado.etiqueta}">Pendiente</span>
+        </div>
+
+        <p class="success" th:if="${param.asignado}">Mentor asignado. Se notificó al practicante y a los mentores.</p>
+        <p class="success" th:if="${param.rechazado}">Solicitud rechazada. Se notificó al practicante con el motivo.</p>
+        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+
+        <!-- ============ practicante ============ -->
+        <section class="detalle-bloque">
+          <h3>Practicante</h3>
+          <dl class="ficha">
+            <dt>Nombre</dt><dd th:text="${p.nombre}">-</dd>
+            <dt>Correo</dt><dd th:text="${p.email}">-</dd>
+            <dt>Verificación</dt>
+            <dd>
+              <span th:if="${p.estadoVerificacion != null}"
+                    th:class="${'badge badge-' + #strings.toLowerCase(p.estadoVerificacion.name())}"
+                    th:text="${p.estadoVerificacion.etiqueta}">Estado</span>
+              <span th:if="${p.estadoVerificacion == null}">No registrado</span>
+              <a th:href="@{'/admin/verificaciones/' + ${p.id}}" class="btn btn-small btn-muted">Ver revisión</a>
+            </dd>
+            <dt>Mentor actual</dt>
+            <dd th:text="${p.mentor != null ? p.mentor.nombre + (asignacion != null ? ' (desde el ' + #temporals.format(asignacion.fechaInicio, 'dd/MM/yyyy') + ')' : '') : 'Sin mentor'}">-</dd>
+          </dl>
+          <div class="banner-warning" th:if="${s.pendiente and (p.estadoVerificacion == null or p.estadoVerificacion.name() != 'APROBADO')}">
+            La verificación de este practicante ya no está aprobada. Revísala antes de asignarle un mentor.
+          </div>
+          <p class="link-secondary"><a th:href="@{'/admin/mentorias/practicantes/' + ${p.id}}">Ver ficha de mentoría del practicante</a></p>
+        </section>
+
+        <!-- ============ solicitud ============ -->
+        <section class="detalle-bloque">
+          <h3>Solicitud</h3>
+          <dl class="ficha">
+            <dt>Tipo</dt><dd th:text="${s.tipo.etiqueta}">-</dd>
+            <dt>Fecha</dt><dd th:text="${#temporals.format(s.fechaSolicitud, 'dd/MM/yyyy HH:mm')}">-</dd>
+            <dt>Especialidad</dt><dd th:text="${s.especialidad != null ? s.especialidad : 'Sin preferencia'}">-</dd>
+            <th:block th:if="${!s.cambio or s.mensaje != s.motivoCambio}">
+              <dt>Mensaje</dt><dd th:text="${s.mensaje}">-</dd>
+            </th:block>
+            <th:block th:if="${s.cambio}">
+              <dt>Motivo del cambio</dt><dd th:text="${s.motivoCambio}">-</dd>
+              <dt>Mentor al pedir el cambio</dt><dd th:text="${s.mentorAnterior != null ? s.mentorAnterior.nombre : 'No registrado'}">-</dd>
+            </th:block>
+            <th:block th:unless="${s.pendiente}">
+              <dt>Revisada por</dt><dd th:text="${s.revisadaPor != null ? s.revisadaPor.nombre : 'No aplica'}">-</dd>
+              <dt>Fecha de revisión</dt><dd th:text="${s.fechaRevision != null ? #temporals.format(s.fechaRevision, 'dd/MM/yyyy HH:mm') : 'No registrada'}">-</dd>
+            </th:block>
+            <th:block th:if="${s.mentorAsignado != null}">
+              <dt>Mentor asignado</dt><dd th:text="${s.mentorAsignado.nombre}">-</dd>
+            </th:block>
+            <th:block th:if="${s.motivoRechazo != null}">
+              <dt>Motivo del rechazo</dt><dd th:text="${s.motivoRechazo}">-</dd>
+            </th:block>
+          </dl>
+        </section>
+
+        <!-- ============ decision ============ -->
+        <section class="detalle-bloque" th:if="${s.pendiente}">
+          <div class="content-header seccion-con-enlace">
+            <h3>Mentores elegibles</h3>
+            <button type="button" class="btn-small btn-danger" data-abrir-modal="modal-rechazar">Rechazar solicitud</button>
+          </div>
+          <p class="hint">Contadores públicos con la verificación aprobada<span th:if="${p.mentor != null}">, sin incluir al mentor actual</span>. Primero los que coinciden con la especialidad pedida.</p>
+          <div class="list">
+            <div class="list-item mentor-elegible" th:each="e : ${elegibles}">
+              <div th:replace="~{fragments/mentoria :: mentor(${e.mentor}, ${e.practicantes})}"></div>
+              <span class="meta-row">
+                <span class="chip chip-suave" th:each="esp : ${e.mentor.especialidadesLista}" th:text="${esp}">Especialidad</span>
+                <span class="list-meta" th:if="${e.mentor.especialidadesLista.isEmpty()}">Sin especialidades registradas</span>
+              </span>
+              <span class="badge badge-aprobado" th:if="${e.coincide}">Coincide con la especialidad</span>
+              <button type="button" class="btn-small list-accion" data-abrir-modal="modal-asignar"
+                      th:attr="data-mentor=${e.mentor.id},data-doc=${e.mentor.nombre}">Seleccionar</button>
+            </div>
+            <p class="empty" th:if="${elegibles.isEmpty()}">No hay contadores públicos verificados disponibles como mentores.</p>
+          </div>
+        </section>
+
+        <p class="link-secondary"><a th:href="@{/admin/mentorias}">&larr; Volver a Gestión de mentorías</a></p>
+      </main>
+    </div>
+
+    <th:block th:if="${s.pendiente}">
+      <!-- Asignar -->
+      <dialog th:replace="~{fragments/modal :: modal('modal-asignar', 'Asignar mentor', ~{::#form-asignar})}">
+        <form id="form-asignar" th:action="@{'/admin/mentorias/' + ${s.id} + '/asignar'}" method="post">
+          <input type="hidden" name="mentorId" value="">
+          <div class="modal-cuerpo">
+            <p>¿Desea asignar a <strong data-modal-doc>mentor</strong> como mentor de <strong th:text="${p.nombre}">practicante</strong>?</p>
+            <p class="hint" th:if="${s.cambio}">Se cerrará la asignación actual. Los casos por aprobar y las entregas en revisión pasarán al nuevo mentor; los casos ya aprobados conservan al mentor que los aprobó.</p>
+            <label for="asignar-observacion">Observación (opcional)</label>
+            <textarea id="asignar-observacion" name="observacion" rows="3" th:maxlength="${textoMax}"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo la asignación del mentor</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Confirmar asignación</button>
+          </div>
+        </form>
+      </dialog>
+
+      <!-- Rechazar -->
+      <dialog th:replace="~{fragments/modal :: modal('modal-rechazar', 'Rechazar solicitud', ~{::#form-rechazar})}">
+        <form id="form-rechazar" th:action="@{'/admin/mentorias/' + ${s.id} + '/rechazar'}" method="post">
+          <div class="modal-cuerpo">
+            <p>La solicitud pasará a <strong>Rechazada</strong> y el practicante verá el motivo.<span th:if="${s.cambio}"> Conservará a su mentor actual.</span></p>
+            <label for="rechazar-motivo" th:text="${'Motivo del rechazo (obligatorio, ' + motivoMin + ' a ' + textoMax + ' caracteres)'}">Motivo</label>
+            <textarea id="rechazar-motivo" name="motivo" rows="3" required th:minlength="${motivoMin}" th:maxlength="${textoMax}"></textarea>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo el rechazo de la solicitud</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" class="btn-danger" data-confirmar disabled>Confirmar rechazo</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

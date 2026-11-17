@@ -1,0 +1,163 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeclaraYa - Mi mentor</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+  </head>
+  <body>
+    <div th:replace="~{fragments/menu :: menu('inicio')}"></div>
+
+    <div class="layout">
+      <aside th:replace="~{fragments/sidebar :: sidebar('mentor')}"></aside>
+
+      <main class="content">
+        <div class="page-title">
+          <h2>Mi mentor</h2>
+          <p class="page-lead">Tu mentor es un contador público verificado que aprueba tus casos y revisa tus entregas. Lo asigna el administrador a partir de tu solicitud.</p>
+        </div>
+
+        <p class="success" th:if="${param.solicitudEnviada}">Solicitud enviada. El administrador la revisará y te avisaremos por notificación.</p>
+        <p class="success" th:if="${param.cambioSolicitado}">Solicitud de cambio enviada. Mientras se revisa, conservas a tu mentor actual.</p>
+        <p class="success" th:if="${param.solicitudCancelada}">Solicitud cancelada.</p>
+        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+
+        <!-- ============ mentor actual ============ -->
+        <section class="detalle-bloque" th:if="${mentor != null}">
+          <h3>Tu mentor actual</h3>
+          <div th:replace="~{fragments/mentoria :: mentor(${mentor}, null)}"></div>
+          <dl class="ficha">
+            <dt>Especialidades</dt>
+            <dd>
+              <span class="meta-row" th:if="${!mentor.especialidadesLista.isEmpty()}">
+                <span class="chip chip-suave" th:each="esp : ${mentor.especialidadesLista}" th:text="${esp}">Especialidad</span>
+              </span>
+              <span th:if="${mentor.especialidadesLista.isEmpty()}">No registradas</span>
+            </dd>
+            <dt>Fecha de asignación</dt>
+            <dd th:text="${asignacion != null ? #temporals.format(asignacion.fechaInicio, 'dd/MM/yyyy') : 'No registrada'}">-</dd>
+          </dl>
+          <div class="row-actions" th:if="${pendiente == null}">
+            <button type="button" class="btn-muted" data-abrir-modal="modal-cambio" th:disabled="${!verificado}">Solicitar cambio de mentor</button>
+          </div>
+          <p class="hint" th:if="${pendiente == null and !verificado}" th:text="${avisoVerificacion}">Aviso</p>
+        </section>
+
+        <!-- ============ solicitud pendiente ============ -->
+        <section class="detalle-bloque" th:if="${pendiente != null}">
+          <div class="content-header seccion-con-enlace">
+            <h3>Solicitud de mentoría pendiente de revisión por el administrador</h3>
+            <span class="badge badge-pendiente">Pendiente</span>
+          </div>
+          <dl class="ficha">
+            <dt>Tipo</dt><dd th:text="${pendiente.tipo.etiqueta}">Tipo</dd>
+            <dt>Fecha</dt><dd th:text="${#temporals.format(pendiente.fechaSolicitud, 'dd/MM/yyyy HH:mm')}">-</dd>
+            <dt>Especialidad</dt><dd th:text="${pendiente.especialidad != null ? pendiente.especialidad : 'Sin preferencia'}">-</dd>
+            <th:block th:if="${pendiente.cambio}">
+              <dt>Motivo del cambio</dt><dd th:text="${pendiente.motivoCambio}">-</dd>
+            </th:block>
+            <th:block th:if="${!pendiente.cambio or pendiente.mensaje != pendiente.motivoCambio}">
+              <dt>Mensaje</dt><dd th:text="${pendiente.mensaje}">-</dd>
+            </th:block>
+          </dl>
+          <div class="row-actions">
+            <button type="button" class="btn-danger" data-abrir-modal="modal-cancelar">Cancelar solicitud</button>
+          </div>
+        </section>
+
+        <!-- ============ ultima solicitud rechazada ============ -->
+        <div class="banner-warning banner-rechazo" th:if="${rechazada != null and pendiente == null}">
+          <strong th:text="${rechazada.cambio ? 'Tu solicitud de cambio de mentor fue rechazada.' : 'Tu solicitud de mentoría fue rechazada.'}">Rechazada</strong>
+          <p th:text="${'Motivo: ' + (rechazada.motivoRechazo != null ? rechazada.motivoRechazo : 'No registrado')}">Motivo</p>
+          <p th:text="${'Revisada el ' + #temporals.format(rechazada.fechaRevision, 'dd/MM/yyyy')}">Fecha</p>
+          <p>Puedes enviar una nueva solicitud cuando quieras.</p>
+        </div>
+
+        <!-- ============ sin mentor ============ -->
+        <section class="detalle-bloque" th:if="${mentor == null and pendiente == null}">
+          <h3>Sin mentor</h3>
+          <p>Actualmente no tienes un mentor asignado.</p>
+          <p class="hint">Sin mentor no puedes enviar ofertas.</p>
+          <div class="row-actions" th:if="${verificado}">
+            <button type="button" data-abrir-modal="modal-solicitar">Solicitar mentor</button>
+          </div>
+          <div class="banner-warning" th:unless="${verificado}" th:text="${avisoVerificacion}">Tu cuenta debe estar verificada para solicitar un mentor</div>
+        </section>
+
+        <!-- ============ historial ============ -->
+        <section class="detalle-bloque">
+          <h3>Historial de mentoría</h3>
+          <th:block th:replace="~{fragments/mentoria :: historial(${historial})}"></th:block>
+        </section>
+      </main>
+    </div>
+
+    <!-- Solicitar mentor -->
+    <th:block th:if="${mentor == null and pendiente == null and verificado}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-solicitar', 'Solicitar mentor', ~{::#form-solicitar})}">
+        <form id="form-solicitar" th:action="@{/practicante/mentor/solicitudes}" method="post">
+          <div class="modal-cuerpo">
+            <p>El administrador revisará tu solicitud y te asignará un contador público verificado.</p>
+            <label for="solicitar-especialidad">Especialidad en la que necesitas mentoría</label>
+            <select id="solicitar-especialidad" name="especialidad" required>
+              <option value="">Elige un trámite</option>
+              <option th:each="t : ${tramites}" th:value="${t}" th:text="${t}">Trámite</option>
+            </select>
+            <label for="solicitar-mensaje" th:text="${'Mensaje para el administrador (máximo ' + textoMax + ' caracteres)'}">Mensaje</label>
+            <textarea id="solicitar-mensaje" name="mensaje" rows="4" required th:maxlength="${textoMax}"></textarea>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Enviar solicitud</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <!-- Solicitar cambio de mentor -->
+    <th:block th:if="${mentor != null and pendiente == null and verificado}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-cambio', 'Solicitar cambio de mentor', ~{::#form-cambio})}">
+        <form id="form-cambio" th:action="@{/practicante/mentor/cambio}" method="post">
+          <div class="modal-cuerpo">
+            <p>Mientras el administrador revisa la solicitud, <strong th:text="${mentor.nombre}">tu mentor</strong> sigue siendo tu mentor.</p>
+            <label for="cambio-motivo" th:text="${'Motivo del cambio (obligatorio, máximo ' + textoMax + ' caracteres)'}">Motivo</label>
+            <textarea id="cambio-motivo" name="motivo" rows="3" required th:maxlength="${textoMax}"></textarea>
+            <label for="cambio-especialidad">Especialidad preferida (opcional)</label>
+            <select id="cambio-especialidad" name="especialidad">
+              <option value="">Sin preferencia</option>
+              <option th:each="t : ${tramites}" th:value="${t}" th:text="${t}">Trámite</option>
+            </select>
+            <label for="cambio-mensaje">Comentario adicional (opcional)</label>
+            <textarea id="cambio-mensaje" name="mensaje" rows="2" th:maxlength="${textoMax}"></textarea>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Cancelar</button>
+            <button type="submit" data-confirmar disabled>Enviar solicitud de cambio</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <!-- Cancelar solicitud -->
+    <th:block th:if="${pendiente != null}">
+      <dialog th:replace="~{fragments/modal :: modal('modal-cancelar', 'Cancelar solicitud', ~{::#form-cancelar})}">
+        <form id="form-cancelar" th:action="@{'/practicante/mentor/solicitudes/' + ${pendiente.id} + '/cancelar'}" method="post">
+          <div class="modal-cuerpo">
+            <p>La solicitud pasará de <strong>Pendiente</strong> a <strong>Cancelada</strong> y quedará en tu historial. Podrás enviar otra después.</p>
+            <label class="check-item modal-confirmacion">
+              <input type="checkbox" name="confirmado" value="true" required data-confirmacion>
+              <span>Confirmo que quiero cancelar esta solicitud</span>
+            </label>
+          </div>
+          <div class="modal-pie">
+            <button type="button" class="btn-muted" data-cerrar-modal>Volver</button>
+            <button type="submit" class="btn-danger" data-confirmar disabled>Cancelar solicitud</button>
+          </div>
+        </form>
+      </dialog>
+    </th:block>
+
+    <script th:src="@{/js/app.js}"></script>
+  </body>
+</html>

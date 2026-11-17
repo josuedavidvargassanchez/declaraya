@@ -43,13 +43,9 @@
                     <div><label for="tarifaBase">Tarifa base (COP)</label><input type="number" id="tarifaBase" name="tarifaBase" min="0" step="1000" placeholder="500000"></div>
                 </div>
                 <div class="form-row">
-                    <div><label for="mentorId">Mentor (solo practicantes)</label>
-                        <select id="mentorId" name="mentorId">
-                            <option value="">Sin mentor</option>
-                            <option th:each="m : ${mentores}" th:value="${m.id}" th:text="${m.nombre}"></option>
-                        </select></div>
                     <label class="check-item check-solo"><input type="checkbox" name="verificado" value="true" checked> <span>Contador verificado (puede ofertar)</span></label>
                 </div>
+                <p class="hint">El mentor de un practicante se asigna después, desde Gestión de mentorías.</p>
                 <button type="submit">Crear usuario</button>
             </form>
         </details>

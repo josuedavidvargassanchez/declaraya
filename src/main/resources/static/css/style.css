@@ -1074,3 +1074,26 @@ dialog.modal form { display: flex; flex-direction: column; min-height: 0; flex: 
 @media (max-width: 800px) {
     .etapas-progreso li { flex: 1 1 100%; }
 }
+
+
+/* =========================================================
+   Mentorías: solicitudes, asignaciones y supervisiones
+   ========================================================= */
+
+.badge-cancelada { background: #e2e8f0; color: #475569; }
+
+/* historial de mentoria */
+.evento-mentoria { align-items: flex-start; }
+.evento-fecha { flex: 0 0 130px; }
+
+/* mentores elegibles y "Mis practicantes" */
+.mentor-elegible, .practicante-fila { flex-wrap: wrap; }
+.mentor-elegible .card-persona { flex: 1 1 220px; margin: 0; }
+.mentor-elegible .meta-row, .practicante-fila .meta-row { flex: 1 1 240px; margin: 0; }
+
+.filtro-mentorias { align-items: center; margin-bottom: 12px; }
+.filtro-mentorias label { margin: 0; }
+
+@media (max-width: 800px) {
+    .evento-fecha { flex: 1 1 100%; }
+}

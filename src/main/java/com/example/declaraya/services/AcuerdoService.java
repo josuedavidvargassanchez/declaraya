@@ -103,7 +103,8 @@ public class AcuerdoService {
 
     }
 
-    // participantes y mentor siempre; el admin solo mientras haya una disputa activa (ABIERTA o EN_REVISION)
+    // participantes y mentor siempre; el admin solo mientras haya una disputa activa (ABIERTA o EN_REVISION).
+    // Mentor = el de la supervision (un mentor anterior conserva los casos que aprobo) o el mentor vigente del practicante
     public boolean puedeVer(Acuerdo acuerdo, Usuario usuario) {
         if (esParticipante(acuerdo, usuario)) {
             return true;
@@ -112,7 +113,7 @@ public class AcuerdoService {
             return disputaService.hayDisputaAbierta(acuerdo);
         }
         if (usuario.getRol() == Rol.CONTADOR_PUBLICO) {
-            return supervisionService.esMentorDe(usuario, acuerdo);
+            return supervisionService.esMentorDe(usuario, acuerdo) || supervisionService.esMentorResponsable(usuario, acuerdo);
         }
         return false;
     }

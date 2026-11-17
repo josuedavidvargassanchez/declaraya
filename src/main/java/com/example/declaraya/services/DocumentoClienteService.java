@@ -100,7 +100,8 @@ public class DocumentoClienteService {
             if (acuerdo.getOferta().getContador().getId().equals(usuario.getId())) {
                 return true;
             }
-            if (usuario.getRol() == Rol.CONTADOR_PUBLICO && supervisionService.esMentorDe(usuario, acuerdo)) {
+            if (usuario.getRol() == Rol.CONTADOR_PUBLICO && (supervisionService.esMentorDe(usuario, acuerdo)
+                    || supervisionService.esMentorResponsable(usuario, acuerdo))) {
                 return true;
             }
             if (usuario.getRol() == Rol.ADMIN && disputaService.hayDisputaAbierta(acuerdo)) {

@@ -80,6 +80,9 @@
             <th:block th:if="${supervision != null}">
               <dt>Mentor</dt><dd th:text="${supervision.mentor.nombre}">Mentor</dd>
             </th:block>
+            <th:block th:if="${supervision != null and contador.mentor != null and contador.mentor.id != supervision.mentor.id}">
+              <dt>Mentor actual del practicante</dt><dd th:text="${contador.mentor.nombre}">Mentor actual</dd>
+            </th:block>
           </dl>
         </section>
 

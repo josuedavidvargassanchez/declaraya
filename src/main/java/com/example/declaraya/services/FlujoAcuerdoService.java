@@ -231,7 +231,21 @@ public class FlujoAcuerdoService {
     /** Panel del mentor: entregas de sus practicantes que esperan revision. */
     public List<EntregaTrabajo> entregasPorRevisar(Usuario mentor) {
         return entregaRepository.findByEstadoOrderByFechaAsc(EstadoEntrega.EN_REVISION_MENTOR).stream()
-                .filter(e -> esMentorDelAcuerdo(e.getAcuerdo(), mentor)).toList();
+                .filter(e -> esRevisorDe(e, mentor)).toList();
+    }
+
+    /**
+     * Mentor que revisa la entrega: el guardado en la entrega (se traslada si el practicante cambia de
+     * mentor mientras esta en revision) o, en las entregas anteriores a ese campo, el mentor responsable.
+     */
+    public boolean esRevisorDe(EntregaTrabajo entrega, Usuario usuario) {
+        if (usuario == null || usuario.getRol() != Rol.CONTADOR_PUBLICO) {
+            return false;
+        }
+        if (entrega.getMentor() != null) {
+            return entrega.getMentor().getId().equals(usuario.getId());
+        }
+        return esMentorDelAcuerdo(entrega.getAcuerdo(), usuario);
     }
 
     public Resource cargarArchivoEntrega(EntregaTrabajo entrega) throws IOException {
@@ -266,6 +280,9 @@ public class FlujoAcuerdoService {
             throw new ReglaNegocioException(e.getMessage());
         }
 
+        // si el mentor habia pedido una correccion, esta entrega es el reenvio
+        boolean reenvio = practicante && entregaRepository.existsByAcuerdoAndEstado(acuerdo, EstadoEntrega.CORRECCION_SOLICITADA);
+
         EntregaTrabajo entrega = new EntregaTrabajo();
         entrega.setAcuerdo(acuerdo);
         entrega.setContador(contador);
@@ -273,6 +290,7 @@ public class FlujoAcuerdoService {
         entrega.setArchivo(guardado);
         entrega.setNombreOriginal(nombreOriginal(archivo));
         entrega.setEstado(practicante ? EstadoEntrega.EN_REVISION_MENTOR : EstadoEntrega.ENVIADA);
+        entrega.setMentor(mentor);
         EntregaTrabajo guardada = entregaRepository.save(entrega);
 
         actividadService.registrar(acuerdo, contador, TipoActividad.ENTREGA_ENVIADA,
@@ -280,7 +298,8 @@ public class FlujoAcuerdoService {
         String titulo = acuerdo.getOferta().getSolicitud().getTitulo();
         if (practicante) {
             cambiarEtapa(acuerdo, EtapaAcuerdo.REVISION_MENTOR, contador);
-            notificacionService.notificar(mentor, contador.getNombre() + " envió una entrega por revisar en \"" + titulo + "\"",
+            notificacionService.notificar(mentor, contador.getNombre()
+                            + (reenvio ? " reenvió la entrega corregida de \"" : " envió una entrega por revisar en \"") + titulo + "\"",
                     "/acuerdos/" + acuerdo.getId());
         } else {
             cambiarEtapa(acuerdo, EtapaAcuerdo.ENTREGADO, contador);
@@ -376,7 +395,7 @@ public class FlujoAcuerdoService {
 
     private EntregaTrabajo entregaParaMentor(Long acuerdoId, Long entregaId, Usuario mentor, boolean confirmado) {
         EntregaTrabajo entrega = buscarEntrega(acuerdoId, entregaId);
-        if (!esMentorDelAcuerdo(entrega.getAcuerdo(), mentor)) {
+        if (!esRevisorDe(entrega, mentor)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el mentor del practicante revisa esta entrega");
         }
         if (entrega.getEstado() != EstadoEntrega.EN_REVISION_MENTOR) {
@@ -402,8 +421,12 @@ public class FlujoAcuerdoService {
         return entrega;
     }
 
+    // el mentor vigente del practicante; si no tiene, el de la supervision del acuerdo
     private Usuario mentorDe(Acuerdo acuerdo, Usuario practicante) {
-        return supervisionService.buscarPorAcuerdo(acuerdo).map(Supervision::getMentor).orElse(practicante.getMentor());
+        if (practicante.getMentor() != null) {
+            return practicante.getMentor();
+        }
+        return supervisionService.buscarPorAcuerdo(acuerdo).map(Supervision::getMentor).orElse(null);
     }
 
     private static String textoOpcional(String texto) {
@@ -435,8 +458,9 @@ public class FlujoAcuerdoService {
         return usuario != null && acuerdo.getOferta().getSolicitud().getPersona().getId().equals(usuario.getId());
     }
 
+    // mentor que actua sobre el acuerdo (el vigente del practicante); ver SupervisionService.esMentorResponsable
     public boolean esMentorDelAcuerdo(Acuerdo acuerdo, Usuario usuario) {
-        return usuario != null && usuario.getRol() == Rol.CONTADOR_PUBLICO && supervisionService.esMentorDe(usuario, acuerdo);
+        return usuario != null && usuario.getRol() == Rol.CONTADOR_PUBLICO && supervisionService.esMentorResponsable(usuario, acuerdo);
     }
 
     /** Lanza 403 si el usuario no puede ver el acuerdo (participantes, mentor, admin con disputa activa). */

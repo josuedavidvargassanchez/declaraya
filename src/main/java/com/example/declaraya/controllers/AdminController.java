@@ -13,6 +13,7 @@ import com.example.declaraya.services.AcuerdoService;
 import com.example.declaraya.services.DatosService;
 import com.example.declaraya.services.DisputaService;
 import com.example.declaraya.services.DocumentoClienteService;
+import com.example.declaraya.services.MentoriaService;
 import com.example.declaraya.services.NotificacionService;
 import com.example.declaraya.services.OfertaService;
 import com.example.declaraya.services.SolicitudDeclaracionService;
@@ -79,6 +80,9 @@ public class AdminController {
     @Autowired
     private DocumentoClienteService documentoService;
 
+    @Autowired
+    private MentoriaService mentoriaService;
+
     @Value("${declaraya.powerbi.url:}")
     private String powerBiUrl;
 
@@ -138,10 +142,10 @@ public class AdminController {
     public String usuarios(Model model) {
         model.addAttribute("usuarios", usuarioService.listarTodos());
         model.addAttribute("roles", Rol.values());
-        model.addAttribute("mentores", usuarioService.listarPorRol(Rol.CONTADOR_PUBLICO));
         return "admin-usuarios";
     }
 
+    // el mentor de un practicante no se fija aqui: se asigna desde /admin/mentorias (MentoriaService)
     @PostMapping("/usuarios")
     public String crearUsuario(@RequestParam String nombre,
                                @RequestParam String email,
@@ -149,12 +153,11 @@ public class AdminController {
                                @RequestParam Rol rol,
                                @RequestParam(required = false) String tarjetaProfesional,
                                @RequestParam(defaultValue = "false") boolean verificado,
-                               @RequestParam(required = false) Long mentorId,
                                @RequestParam(required = false) BigDecimal tarifaBase,
                                Authentication authentication) {
         try {
             Usuario admin = usuarioService.buscarPorEmail(authentication.getName()).orElse(null);
-            usuarioService.crearPorAdmin(nombre, email, password, rol, tarjetaProfesional, verificado, mentorId, tarifaBase, admin);
+            usuarioService.crearPorAdmin(nombre, email, password, rol, tarjetaProfesional, verificado, tarifaBase, admin);
             return "redirect:/admin/usuarios?creado";
         } catch (IllegalArgumentException e) {
             return "redirect:/admin/usuarios?error=" + codificar(e.getMessage());
@@ -165,7 +168,6 @@ public class AdminController {
     public String formularioUsuario(@PathVariable Long id, Model model) {
         model.addAttribute("u", usuarioService.buscarPorId(id));
         model.addAttribute("roles", Rol.values());
-        model.addAttribute("mentores", usuarioService.listarPorRol(Rol.CONTADOR_PUBLICO));
         return "admin-usuario-editar";
     }
 
@@ -176,11 +178,12 @@ public class AdminController {
                                 @RequestParam(required = false) String password,
                                 @RequestParam Rol rol,
                                 @RequestParam(required = false) String tarjetaProfesional,
-                                @RequestParam(required = false) Long mentorId,
                                 @RequestParam(required = false) BigDecimal tarifaBase) {
         try {
-            // el estado de verificacion no se edita aqui: solo cambia desde /admin/verificaciones/{id}
-            usuarioService.actualizarPorAdmin(id, nombre, email, password, rol, tarjetaProfesional, mentorId, tarifaBase);
+            // el estado de verificacion no se edita aqui: solo cambia desde /admin/verificaciones/{id};
+            // el mentor solo cambia desde /admin/mentorias (si deja de ser practicante, se cierra su asignacion)
+            Usuario actualizado = usuarioService.actualizarPorAdmin(id, nombre, email, password, rol, tarjetaProfesional, tarifaBase);
+            mentoriaService.sincronizarAsignacion(actualizado);
             return "redirect:/admin/usuarios?actualizado";
         } catch (IllegalArgumentException e) {
             return "redirect:/admin/usuarios/" + id + "/editar?error=" + codificar(e.getMessage());

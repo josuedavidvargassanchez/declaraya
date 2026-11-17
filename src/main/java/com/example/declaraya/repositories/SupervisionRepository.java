@@ -1,5 +1,6 @@
 package com.example.declaraya.repositories;
 
+import com.example.declaraya.enums.EstadoSupervision;
 import com.example.declaraya.models.Supervision;
 import com.example.declaraya.models.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,8 @@ public interface SupervisionRepository extends JpaRepository<Supervision, Long> 
     List<Supervision> findByMentor(Usuario mentor);
 
     List<Supervision> findByPracticante(Usuario practicante);
+
+    List<Supervision> findByPracticanteAndEstado(Usuario practicante, EstadoSupervision estado);
 
     Optional<Supervision> findByAcuerdoId(Long acuerdoId);
 }

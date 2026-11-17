@@ -51,6 +51,12 @@ public class EntregaTrabajo {
     @Column(length = 500)
     private String observacionMentor;
 
+    // mentor que revisa (o reviso) la entrega de un practicante; null en las de un contador publico.
+    // Si el practicante cambia de mentor, las entregas aun en revision pasan al mentor nuevo
+    @ManyToOne
+    @JoinColumn(name = "mentor_id")
+    private Usuario mentor;
+
     @Column(length = 500)
     private String observacionCliente;
 
@@ -122,6 +128,14 @@ public class EntregaTrabajo {
 
     public void setObservacionMentor(String observacionMentor) {
         this.observacionMentor = observacionMentor;
+    }
+
+    public Usuario getMentor() {
+        return mentor;
+    }
+
+    public void setMentor(Usuario mentor) {
+        this.mentor = mentor;
     }
 
     public String getObservacionCliente() {

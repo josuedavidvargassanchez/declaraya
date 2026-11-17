@@ -4,6 +4,7 @@ import com.example.declaraya.dto.NuevaSolicitudDTO;
 import com.example.declaraya.enums.EstadoAcuerdo;
 import com.example.declaraya.enums.EstadoOferta;
 import com.example.declaraya.enums.EstadoSolicitud;
+import com.example.declaraya.enums.EstadoSupervision;
 import com.example.declaraya.enums.EstadoVerificacion;
 import com.example.declaraya.enums.EtapaAcuerdo;
 import com.example.declaraya.enums.ResultadoDisputa;
@@ -17,12 +18,14 @@ import com.example.declaraya.models.Supervision;
 import com.example.declaraya.models.Usuario;
 import com.example.declaraya.models.Calificacion;
 import com.example.declaraya.repositories.AcuerdoRepository;
+import com.example.declaraya.repositories.AsignacionMentoriaRepository;
 import com.example.declaraya.repositories.CalificacionRepository;
 import com.example.declaraya.repositories.OfertaRepository;
 import com.example.declaraya.repositories.SolicitudDeclaracionRepository;
 import com.example.declaraya.services.AcuerdoService;
 import com.example.declaraya.services.ActividadAcuerdoService;
 import com.example.declaraya.services.DisputaService;
+import com.example.declaraya.services.MentoriaService;
 import com.example.declaraya.services.OfertaService;
 import com.example.declaraya.services.SolicitudDeclaracionService;
 import com.example.declaraya.services.SupervisionService;
@@ -57,6 +60,11 @@ public class DemoDataSeeder implements CommandLineRunner {
 
     private static final String MARCADOR = "mauricio.salazar@example.com";
     private static final String CLAVE_DEMO = "demo1234";
+
+    // los mentores de ejemplo existen desde antes de los primeros acuerdos (enero de 2026)
+    private static final LocalDateTime INICIO_MENTORIAS_DEMO = LocalDateTime.of(2026, 1, 2, 9, 0);
+    // practicante de ejemplo con un caso esperando la aprobacion de su mentor (para probar el cambio de mentor)
+    private static final String PRACTICANTE_CASO_PENDIENTE = "camila.herrera@example.com";
 
     // titulo, valor minimo, valor maximo (COP), peso de frecuencia
     private static final Object[][] TRAMITES = {
@@ -153,6 +161,15 @@ public class DemoDataSeeder implements CommandLineRunner {
     @Autowired
     private CalificacionRepository calificacionRepository;
 
+    @Autowired
+    private MentoriaService mentoriaService;
+
+    @Autowired
+    private AsignacionMentoriaRepository asignacionRepository;
+
+    // en una carga nueva: si ya se dejo el caso de Camila esperando a su mentor
+    private boolean casoPendienteCreado;
+
     @Override
     public void run(String... args) {
         if (!activo) {
@@ -163,6 +180,55 @@ public class DemoDataSeeder implements CommandLineRunner {
         }
         // independiente de la carga inicial: tambien completa las bases creadas antes de existir las calificaciones
         completarCalificaciones();
+        // y las creadas antes del flujo de solicitudes de mentoria
+        completarMentorias();
+    }
+
+    /**
+     * Bases de ejemplo anteriores al flujo de mentorias (se hace una sola vez, cuando Camila aun no tiene
+     * asignaciones): deja un caso de Camila esperando a su mentor si no tiene uno activo, y registra la
+     * asignacion vigente de los practicantes de ejemplo con la fecha de inicio de los datos.
+     */
+    private void completarMentorias() {
+        Usuario camila = usuarioService.buscarPorEmail(PRACTICANTE_CASO_PENDIENTE).orElse(null);
+        if (camila == null || asignacionRepository.existsByPracticante(camila)) {
+            return;
+        }
+        boolean tienePendiente = supervisionService.listarPorPracticante(camila).stream()
+                .anyMatch(s -> s.getEstado() == EstadoSupervision.PENDIENTE_APROBACION);
+        if (!tienePendiente && camila.getMentor() != null && acuerdoService.contarActivosDe(camila) == 0) {
+            Usuario persona = usuarioService.buscarPorEmail(correo(PERSONAS[0])).orElse(null);
+            if (persona != null) {
+                crearCasoPendienteDeMentor(camila, persona);
+            }
+        }
+        registrarMentoriasDemo();
+    }
+
+    private void registrarMentoriasDemo() {
+        for (String nombre : PRACTICANTES) {
+            usuarioService.buscarPorEmail(correo(nombre))
+                    .ifPresent(p -> mentoriaService.registrarAsignacionPrevia(p, INICIO_MENTORIAS_DEMO));
+        }
+    }
+
+    // acuerdo recien aceptado de un practicante: queda en APROBACION_MENTOR con la supervision pendiente
+    private void crearCasoPendienteDeMentor(Usuario practicante, Usuario persona) {
+        NuevaSolicitudDTO dto = new NuevaSolicitudDTO();
+        dto.setTitulo("Declaración de renta");
+        dto.setAnioGravable(2025);
+        dto.setUrgencia("Normal");
+        dto.setSituaciones(new ArrayList<>(List.of("Empleado con contrato laboral")));
+        dto.setDescripcion("Necesito ayuda con la declaración de renta del año 2025. " + EXTRAS_DESCRIPCION[0]);
+        SolicitudDeclaracion solicitud = solicitudService.crear(persona, dto);
+        Oferta oferta = ofertaService.crear(solicitud, practicante, MENSAJES_OFERTA[0], BigDecimal.valueOf(250000),
+                LocalDate.now().plusDays(20));
+        oferta.setEstado(EstadoOferta.ACEPTADA);
+        ofertaRepository.save(oferta);
+        Acuerdo acuerdo = acuerdoService.crearDesdeOferta(oferta);
+        supervisionService.asignar(practicante, practicante.getMentor(), acuerdo);
+        solicitud.setEstado(EstadoSolicitud.EN_PROCESO);
+        solicitudRepository.save(solicitud);
     }
 
     private static final String[] COMENTARIOS = {
@@ -211,6 +277,8 @@ public class DemoDataSeeder implements CommandLineRunner {
             Usuario mentor = ultimo ? null : publicos.get(i % (PUBLICOS.length - 1));
             practicantes.add(crearUsuario(PRACTICANTES[i], Rol.CONTADOR_PRACTICANTE, 200 + i, !ultimo, mentor, rnd));
         }
+        // los mentores de ejemplo quedan registrados como asignaciones anteriores al flujo de solicitudes
+        registrarMentoriasDemo();
         List<Usuario> personas = new ArrayList<>();
         for (int i = 0; i < PERSONAS.length; i++) {
             personas.add(crearUsuario(PERSONAS[i], Rol.PERSONA, 0, true, null, rnd));
@@ -230,8 +298,13 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         Map<Long, Integer> activos = new HashMap<>();
         List<Acuerdo> acuerdos = new ArrayList<>();
+        casoPendienteCreado = false;
         for (int i = 0; i < 48; i++) {
             crearCaso(rnd, personas, oferentes, activos, acuerdos);
+        }
+        Usuario camila = practicantes.get(0);
+        if (!casoPendienteCreado && camila.getMentor() != null && activos.getOrDefault(camila.getId(), 0) == 0) {
+            crearCasoPendienteDeMentor(camila, personas.get(0));
         }
         crearDisputas(acuerdos);
 
@@ -397,13 +470,22 @@ public class DemoDataSeeder implements CommandLineRunner {
             acuerdo = acuerdoRepository.save(acuerdo);
             actividadService.alinearFechaCreacion(acuerdo);
             LocalDateTime inicio = acuerdo.getFechaCreacion();
+            // el primer caso activo de Camila queda esperando a su mentor (etapa APROBACION_MENTOR)
+            boolean esperaMentor = estado == 1 && !casoPendienteCreado
+                    && PRACTICANTE_CASO_PENDIENTE.equals(contador.getEmail()) && contador.getMentor() != null;
             if (contador.getRol() == Rol.CONTADOR_PRACTICANTE && contador.getMentor() != null) {
                 Supervision supervision = supervisionService.asignar(contador, contador.getMentor(), acuerdo);
-                supervisionService.aprobar(supervision.getId(), contador.getMentor());
-                actividadService.registrar(acuerdo, contador.getMentor(), TipoActividad.MENTOR_APROBO,
-                        contador.getMentor().getNombre() + " aprobó que el practicante atienda este caso", inicio.plusHours(3));
+                if (!esperaMentor) {
+                    supervisionService.aprobar(supervision.getId(), contador.getMentor());
+                    actividadService.registrar(acuerdo, contador.getMentor(), TipoActividad.MENTOR_APROBO,
+                            contador.getMentor().getNombre() + " aprobó que el practicante atienda este caso", inicio.plusHours(3));
+                }
             }
-            completarEtapa(acuerdo, estado == 2, rnd, inicio);
+            if (esperaMentor) {
+                casoPendienteCreado = true;
+            } else {
+                completarEtapa(acuerdo, estado == 2, rnd, inicio);
+            }
             if (estado == 1) {
                 activos.merge(contador.getId(), 1, Integer::sum);
             }

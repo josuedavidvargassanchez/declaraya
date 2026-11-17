@@ -147,7 +147,8 @@ public class AcuerdoDetalleController {
         model.addAttribute("puedeEntregar", activo && esContador && etapa == EtapaAcuerdo.PREPARACION);
         EntregaTrabajo enRevision = flujoService.entregaEnRevision(acuerdo);
         model.addAttribute("entregaEnRevision", enRevision);
-        model.addAttribute("puedeRevisarComoMentor", esMentor && etapa == EtapaAcuerdo.REVISION_MENTOR && enRevision != null);
+        model.addAttribute("puedeRevisarComoMentor", etapa == EtapaAcuerdo.REVISION_MENTOR && enRevision != null
+                && flujoService.esRevisorDe(enRevision, usuario));
         model.addAttribute("puedeResponderEntrega", esCliente && etapa == EtapaAcuerdo.ENTREGADO
                 && flujoService.entregaEnviada(acuerdo) != null);
 

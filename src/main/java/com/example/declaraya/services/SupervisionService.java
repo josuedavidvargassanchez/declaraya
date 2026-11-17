@@ -2,6 +2,7 @@ package com.example.declaraya.services;
 
 import com.example.declaraya.exceptions.RecursoNoEncontradoException;
 import com.example.declaraya.enums.EstadoSupervision;
+import com.example.declaraya.enums.Rol;
 import com.example.declaraya.models.Acuerdo;
 import com.example.declaraya.models.Supervision;
 import com.example.declaraya.models.Usuario;
@@ -38,6 +39,22 @@ public class SupervisionService {
 
     public boolean esMentorDe(Usuario usuario, Acuerdo acuerdo){
         return buscarPorAcuerdo(acuerdo).map(s -> s.getMentor().getId().equals(usuario.getId())).orElse(false);
+    }
+
+    /**
+     * Mentor que hoy responde por el acuerdo: el mentor vigente del practicante (Usuario.mentor) o,
+     * si no tiene, el de la supervision. Tras un cambio de mentor, el anterior conserva la supervision
+     * de los casos que aprobo (esMentorDe) pero ya no actua sobre ellos.
+     */
+    public boolean esMentorResponsable(Usuario usuario, Acuerdo acuerdo) {
+        if (usuario == null || usuario.getRol() != Rol.CONTADOR_PUBLICO) {
+            return false;
+        }
+        Usuario contador = acuerdo.getOferta().getContador();
+        if (contador.getRol() == Rol.CONTADOR_PRACTICANTE && contador.getMentor() != null) {
+            return contador.getMentor().getId().equals(usuario.getId());
+        }
+        return esMentorDe(usuario, acuerdo);
     }
 
     public Supervision aprobar(Long id, Usuario mentor) {
