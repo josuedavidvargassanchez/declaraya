@@ -1,8 +1,6 @@
 package com.example.declaraya.controllers;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +18,13 @@ import com.example.declaraya.exceptions.ReglaNegocioException;
 import com.example.declaraya.models.Usuario;
 import com.example.declaraya.services.CatalogoRequisitos;
 import com.example.declaraya.services.FotoPerfilService;
+import com.example.declaraya.services.SesionesService;
 import com.example.declaraya.services.UsuarioService;
 import com.example.declaraya.services.VerificacionService;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.validation.BindingResult;
@@ -48,6 +49,9 @@ public class PerfilController {
     @Autowired
     private VerificacionService verificacionService;
 
+    @Autowired
+    private SesionesService sesionesService;
+
     private Usuario usuarioActual(Authentication authentication){
         return usuarioService.buscarPorEmail(authentication.getName()).orElseThrow(() -> new IllegalStateException("Usuario autenticado no encontrado"));
     }
@@ -61,10 +65,6 @@ public class PerfilController {
         if (!model.containsAttribute("perfil")) {
             model.addAttribute("perfil", PerfilDTO.desde(usuario));
         }
-    }
-
-    private static String codificar(String mensaje) {
-        return URLEncoder.encode(mensaje, StandardCharsets.UTF_8);
     }
 
     @GetMapping("/perfil")
@@ -93,12 +93,17 @@ public class PerfilController {
     public String cambiarContrasena(@RequestParam(required = false) String actual,
                                     @RequestParam(required = false) String nueva,
                                     @RequestParam(required = false) String confirmacion,
-                                    Authentication authentication) {
+                                    Authentication authentication,
+                                    HttpServletRequest request,
+                                    RedirectAttributes redirect) {
         try {
-            usuarioService.cambiarContrasena(usuarioActual(authentication), actual, nueva, confirmacion);
+            Usuario usuario = usuarioService.cambiarContrasena(usuarioActual(authentication), actual, nueva, confirmacion);
+            // las demas sesiones abiertas con la contraseña anterior se cierran; esta se conserva
+            sesionesService.expirarOtras(usuario.getEmail(), request.getSession().getId());
             return "redirect:/perfil?contrasenaActualizada";
         } catch (ReglaNegocioException e) {
-            return "redirect:/perfil?errorContrasena=" + codificar(e.getMessage());
+            redirect.addFlashAttribute("errorContrasena", e.getMessage());
+            return "redirect:/perfil";
         }
     }
 
@@ -106,12 +111,14 @@ public class PerfilController {
     @PostMapping("/perfil/verificacion/nueva")
     public String solicitarNuevaVerificacion(@RequestParam(required = false) String nuevaTarjeta,
                                              @RequestParam(defaultValue = "false") boolean confirmado,
-                                             Authentication authentication) {
+                                             Authentication authentication,
+                                             RedirectAttributes redirect) {
         try {
             verificacionService.solicitarNuevaVerificacion(usuarioActual(authentication), nuevaTarjeta, confirmado);
             return "redirect:/perfil?nuevaVerificacion";
         } catch (ReglaNegocioException e) {
-            return "redirect:/perfil?errorVerificacion=" + codificar(e.getMessage());
+            redirect.addFlashAttribute("errorVerificacion", e.getMessage());
+            return "redirect:/perfil";
         }
     }
 
@@ -134,14 +141,17 @@ public class PerfilController {
     @PostMapping("/perfil/verificacion")
     public String reenviarVerificacion(@RequestParam(required = false) MultipartFile soporteTarjeta,
                                        @RequestParam(required = false) MultipartFile soporteDocumento,
-                                       Authentication authentication) {
+                                       Authentication authentication,
+                                       RedirectAttributes redirect) {
         try {
             verificacionService.reenviarSoportes(usuarioActual(authentication), soporteTarjeta, soporteDocumento);
             return "redirect:/perfil?verificacionEnviada";
         } catch (ReglaNegocioException e) {
-            return "redirect:/perfil?errorVerificacion=" + codificar(e.getMessage());
+            redirect.addFlashAttribute("errorVerificacion", e.getMessage());
+            return "redirect:/perfil";
         } catch (IOException e) {
-            return "redirect:/perfil?errorVerificacion=" + codificar("No se pudo guardar el archivo. Intenta de nuevo.");
+            redirect.addFlashAttribute("errorVerificacion", "No se pudo guardar el archivo. Intenta de nuevo.");
+            return "redirect:/perfil";
         }
     }
 

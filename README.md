@@ -14,6 +14,33 @@ Spring Boot 4 · Java 21 · MySQL · Thymeleaf · Spring Security.
 Usuario administrador de prueba: `admin@declaraya.com` / `admin123`.
 Apagar: `docker compose down` (conserva datos) o `docker compose down -v` (los borra).
 
+### En producción: cambia las credenciales de desarrollo
+En desarrollo todo funciona igual que antes sin configurar nada. Fuera de tu PC, **define estas variables de entorno antes del primer arranque**:
+
+| Variable | Propiedad | Valor por defecto (solo desarrollo) | En producción |
+|---|---|---|---|
+| `ADMIN_PASSWORD` | `declaraya.admin.password` | `admin123` | una clave segura |
+| `DEMO_DATA` | `declaraya.demo-data` | `true` | `false` (no cargar cuentas de ejemplo con clave `demo1234`) |
+
+La clave solo se usa al **crear** el administrador inicial. Si `admin@declaraya.com` ya existe, conserva la clave que tenga; cámbiala desde **Mi perfil**. Cambia también las credenciales de MySQL (`SPRING_DATASOURCE_*`).
+
+## Seguridad
+- **Acceso a solicitudes (`/solicitudes/{id}`)**: la decide `SolicitudDeclaracionService.puedeVer` y en cualquier otro caso responde 403. Pueden verla:
+  - el dueño y el admin;
+  - un contador que puede ofertar (la misma regla de `enviarOferta`) mientras la solicitud está abierta;
+  - un contador que ya ofertó en ella;
+  - el contador y el mentor de su acuerdo.
+- **Aceptar una oferta** ocurre en una transacción que bloquea la solicitud (`SELECT ... FOR UPDATE`). Dos clics o dos pestañas no crean dos acuerdos.
+- **Archivos**: además de la extensión se revisan los primeros bytes (`%PDF`, PNG `89 50 4E 47`, JPG `FF D8 FF`) en todas las cargas: chat, Mis documentos, verificación, entregas y foto.
+- **Inicio de sesión**:
+  - tras 5 intentos fallidos seguidos, el correo queda bloqueado 15 minutos (`/login?bloqueado`); la cuenta se lleva en memoria y se reinicia al entrar bien o al reiniciar la app;
+  - cambiar el rol o eliminar a un usuario cierra todas sus sesiones;
+  - cambiar la contraseña cierra las demás sesiones del usuario.
+- **Administradores**: un administrador no puede cambiar su propio rol ni eliminarse, y el sistema nunca se queda sin un ADMIN.
+- **Errores**: las páginas de error no muestran trazas ni mensajes internos (`spring.web.error.include-message=never`). Los 403 y 404 muestran solo su motivo, escrito por la aplicación.
+- **Exportación CSV**: las celdas que empiezan por `=`, `+`, `-`, `@`, tabulación o retorno de carro llevan un apóstrofo delante, para que Excel o Power BI no las ejecuten como fórmula.
+- **Docker**: la imagen usa `eclipse-temurin:21-jre` y ejecuta la aplicación con un usuario sin privilegios.
+
 ## Roles
 - **PERSONA**: publica solicitudes, recibe ofertas, acepta una y chatea con el contador.
 - **CONTADOR_PUBLICO**: envía ofertas (requiere verificación del admin) y supervisa practicantes.

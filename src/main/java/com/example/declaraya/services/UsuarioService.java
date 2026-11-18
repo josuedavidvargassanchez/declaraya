@@ -117,6 +117,31 @@ public class UsuarioService {
         }
     }
 
+    // ---- limites de los formularios del administrador (los mismos de Mi perfil y del registro)
+    public static final int NOMBRE_MAX = 100;
+    public static final int EMAIL_MAX = 120;
+    public static final int TARJETA_MAX = 50;
+    public static final BigDecimal TARIFA_MAX = new BigDecimal("100000000");
+    private static final java.util.regex.Pattern FORMATO_EMAIL =
+            java.util.regex.Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+
+    /** Valida lo que llega por @RequestParam desde /admin/usuarios; lanza IllegalArgumentException con el mensaje. */
+    static void validarDatosAdmin(String nombre, String email, String tarjeta, BigDecimal tarifa) {
+        if (nombre != null && nombre.trim().length() > NOMBRE_MAX) {
+            throw new IllegalArgumentException("El nombre no puede superar " + NOMBRE_MAX + " caracteres");
+        }
+        String correo = email == null ? "" : email.trim();
+        if (!correo.isEmpty() && (correo.length() > EMAIL_MAX || !FORMATO_EMAIL.matcher(correo).matches())) {
+            throw new IllegalArgumentException("Escribe un correo electrónico válido (máximo " + EMAIL_MAX + " caracteres)");
+        }
+        if (tarjeta != null && tarjeta.trim().length() > TARJETA_MAX) {
+            throw new IllegalArgumentException("La tarjeta profesional no puede superar " + TARJETA_MAX + " caracteres");
+        }
+        if (tarifa != null && (tarifa.signum() < 0 || tarifa.compareTo(TARIFA_MAX) > 0)) {
+            throw new IllegalArgumentException("La tarifa base debe estar entre $0 y $100.000.000");
+        }
+    }
+
     // el administrador crea cuentas completas (incluso contadores ya verificados: en ese caso
     // queda registrado como quien aprobo la verificacion)
     public Usuario crearPorAdmin(String nombre, String email, String passwordPlano, Rol rol,
@@ -126,6 +151,7 @@ public class UsuarioService {
                 || passwordPlano == null || passwordPlano.length() < 6) {
             throw new IllegalArgumentException("Completa nombre, correo, rol y una contraseña de mínimo 6 caracteres");
         }
+        validarDatosAdmin(nombre, email, tarjeta, tarifa);
         if (usuarioRepository.findByEmail(email.trim()).isPresent()) {
             throw new IllegalArgumentException("Ya existe un usuario con ese correo");
         }
@@ -145,11 +171,21 @@ public class UsuarioService {
         return usuarioRepository.save(u);
     }
 
+    /** actor: el administrador que edita (no puede cambiarse el rol a si mismo). */
     public Usuario actualizarPorAdmin(Long id, String nombre, String email, String passwordPlano, Rol rol,
-                                       String tarjeta, BigDecimal tarifa) {
+                                       String tarjeta, BigDecimal tarifa, Usuario actor) {
         Usuario u = buscarPorId(id);
         if (nombre == null || nombre.isBlank() || email == null || email.isBlank() || rol == null) {
             throw new IllegalArgumentException("Nombre, correo y rol son obligatorios");
+        }
+        validarDatosAdmin(nombre, email, tarjeta, tarifa);
+        if (rol != u.getRol()) {
+            if (actor != null && actor.getId() != null && actor.getId().equals(u.getId())) {
+                throw new IllegalArgumentException("No puedes cambiar tu propio rol");
+            }
+            if (u.getRol() == Rol.ADMIN && usuarioRepository.countByRol(Rol.ADMIN) <= 1) {
+                throw new IllegalArgumentException("No se puede quitar el rol al último administrador: el sistema debe tener al menos uno");
+            }
         }
         Optional<Usuario> otro = usuarioRepository.findByEmail(email.trim());
         if (otro.isPresent() && !otro.get().getId().equals(id)) {
@@ -165,6 +201,16 @@ public class UsuarioService {
         }
         aplicarDatosAdmin(u, rol, tarjeta, tarifa);
         return usuarioRepository.save(u);
+    }
+
+    /** Antes de borrar nada (ni sus notificaciones): nadie se elimina a si mismo ni al ultimo administrador. */
+    public void exigirEliminable(Usuario usuario, Usuario actor) {
+        if (actor != null && actor.getId() != null && actor.getId().equals(usuario.getId())) {
+            throw new IllegalArgumentException("No puedes eliminar tu propia cuenta");
+        }
+        if (usuario.getRol() == Rol.ADMIN && usuarioRepository.countByRol(Rol.ADMIN) <= 1) {
+            throw new IllegalArgumentException("No se puede eliminar al último administrador: el sistema debe tener al menos uno");
+        }
     }
 
     public void eliminar(Long id) {

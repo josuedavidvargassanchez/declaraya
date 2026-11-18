@@ -17,6 +17,7 @@ import com.example.declaraya.services.MentoriaService;
 import com.example.declaraya.services.NotificacionService;
 import com.example.declaraya.services.OfertaService;
 import com.example.declaraya.services.SolicitudDeclaracionService;
+import com.example.declaraya.services.SesionesService;
 import com.example.declaraya.services.UsuarioService;
 import com.example.declaraya.services.VerificacionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,10 +36,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -83,11 +84,22 @@ public class AdminController {
     @Autowired
     private MentoriaService mentoriaService;
 
+    @Autowired
+    private SesionesService sesionesService;
+
     @Value("${declaraya.powerbi.url:}")
     private String powerBiUrl;
 
-    private String codificar(String mensaje) {
-        return URLEncoder.encode(mensaje, StandardCharsets.UTF_8);
+    // la tarifa llega como texto para que un valor no numerico se muestre como error y no como pagina 400/500
+    private static BigDecimal tarifa(String texto) {
+        if (texto == null || texto.isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(texto.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("La tarifa base debe ser un número");
+        }
     }
 
     // ---------------------------------------------------------------- paneles
@@ -153,14 +165,16 @@ public class AdminController {
                                @RequestParam Rol rol,
                                @RequestParam(required = false) String tarjetaProfesional,
                                @RequestParam(defaultValue = "false") boolean verificado,
-                               @RequestParam(required = false) BigDecimal tarifaBase,
-                               Authentication authentication) {
+                               @RequestParam(required = false) String tarifaBase,
+                               Authentication authentication,
+                               RedirectAttributes redirect) {
         try {
             Usuario admin = usuarioService.buscarPorEmail(authentication.getName()).orElse(null);
-            usuarioService.crearPorAdmin(nombre, email, password, rol, tarjetaProfesional, verificado, tarifaBase, admin);
+            usuarioService.crearPorAdmin(nombre, email, password, rol, tarjetaProfesional, verificado, tarifa(tarifaBase), admin);
             return "redirect:/admin/usuarios?creado";
         } catch (IllegalArgumentException e) {
-            return "redirect:/admin/usuarios?error=" + codificar(e.getMessage());
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/admin/usuarios";
         }
     }
 
@@ -178,31 +192,48 @@ public class AdminController {
                                 @RequestParam(required = false) String password,
                                 @RequestParam Rol rol,
                                 @RequestParam(required = false) String tarjetaProfesional,
-                                @RequestParam(required = false) BigDecimal tarifaBase) {
+                                @RequestParam(required = false) String tarifaBase,
+                                Authentication authentication,
+                                RedirectAttributes redirect) {
         try {
             // el estado de verificacion no se edita aqui: solo cambia desde /admin/verificaciones/{id};
             // el mentor solo cambia desde /admin/mentorias (si deja de ser practicante, se cierra su asignacion)
-            Usuario actualizado = usuarioService.actualizarPorAdmin(id, nombre, email, password, rol, tarjetaProfesional, tarifaBase);
+            Usuario admin = usuarioService.buscarPorEmail(authentication.getName()).orElse(null);
+            Usuario antes = usuarioService.buscarPorId(id);
+            String emailAnterior = antes.getEmail();
+            Rol rolAnterior = antes.getRol();
+            Usuario actualizado = usuarioService.actualizarPorAdmin(id, nombre, email, password, rol, tarjetaProfesional,
+                    tarifa(tarifaBase), admin);
             mentoriaService.sincronizarAsignacion(actualizado);
+            if (rolAnterior != actualizado.getRol()) {
+                // con otro rol, sus sesiones abiertas ya no corresponden a sus permisos
+                sesionesService.expirarTodas(emailAnterior);
+            }
             return "redirect:/admin/usuarios?actualizado";
         } catch (IllegalArgumentException e) {
-            return "redirect:/admin/usuarios/" + id + "/editar?error=" + codificar(e.getMessage());
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/admin/usuarios/" + id + "/editar";
         }
     }
 
     @PostMapping("/usuarios/{id}/eliminar")
-    public String eliminarUsuario(@PathVariable Long id, Authentication authentication) {
+    public String eliminarUsuario(@PathVariable Long id, Authentication authentication, RedirectAttributes redirect) {
         Usuario usuario = usuarioService.buscarPorId(id);
-        if (usuario.getEmail().equals(authentication.getName())) {
-            return "redirect:/admin/usuarios?error=" + codificar("No puedes eliminar tu propia cuenta");
+        try {
+            // se valida antes de borrar sus notificaciones: ni la propia cuenta ni el ultimo administrador
+            usuarioService.exigirEliminable(usuario, usuarioService.buscarPorEmail(authentication.getName()).orElse(null));
+        } catch (IllegalArgumentException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/admin/usuarios";
         }
         try {
             notificacionService.eliminarDe(usuario);
             usuarioService.eliminar(id);
+            sesionesService.expirarTodas(usuario.getEmail());
             return "redirect:/admin/usuarios?eliminado";
         } catch (DataIntegrityViolationException e) {
-            return "redirect:/admin/usuarios?error="
-                    + codificar("No se puede eliminar: tiene solicitudes, ofertas, acuerdos o documentos asociados");
+            redirect.addFlashAttribute("error", "No se puede eliminar: tiene solicitudes, ofertas, acuerdos o documentos asociados");
+            return "redirect:/admin/usuarios";
         }
     }
 
@@ -222,7 +253,7 @@ public class AdminController {
     }
 
     @PostMapping("/solicitudes/{id}/eliminar")
-    public String eliminarSolicitud(@PathVariable Long id) {
+    public String eliminarSolicitud(@PathVariable Long id, RedirectAttributes redirect) {
         try {
             SolicitudDeclaracion solicitud = solicitudService.buscarPorId(id);
             documentoService.desvincularDeSolicitud(solicitud);
@@ -230,18 +261,23 @@ public class AdminController {
             solicitudService.eliminar(id);
             return "redirect:/admin/solicitudes?eliminada";
         } catch (DataIntegrityViolationException e) {
-            return "redirect:/admin/solicitudes?error="
-                    + codificar("No se puede eliminar: la solicitud ya tiene un acuerdo asociado");
+            redirect.addFlashAttribute("error", "No se puede eliminar: la solicitud ya tiene un acuerdo asociado");
+            return "redirect:/admin/solicitudes";
         }
     }
 
     // ------------------------------------------------------- exportar a Power BI
 
-    private static String csv(String valor) {
+    // inyeccion de formulas: Excel o Power BI no deben interpretar una celda que empieza por = + - @ \t \r
+    static String csv(String valor) {
         if (valor == null) {
             return "";
         }
-        String v = valor.replace("\"", "\"\"");
+        String v = valor;
+        if (!v.isEmpty() && "=+-@\t\r".indexOf(v.charAt(0)) >= 0) {
+            v = "'" + v;
+        }
+        v = v.replace("\"", "\"\"");
         boolean comillas = v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r");
         return comillas ? "\"" + v + "\"" : v;
     }

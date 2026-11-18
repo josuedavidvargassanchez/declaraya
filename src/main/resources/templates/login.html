@@ -26,8 +26,14 @@
     <div th:if="${param.error}" class="alert alert-danger" role="alert">
         Correo o contraseña incorrectos.
     </div>
+    <div th:if="${param.bloqueado}" class="alert alert-danger" role="alert">
+        Demasiados intentos fallidos. Intenta de nuevo en 15 minutos.
+    </div>
     <div th:if="${error}" class="alert alert-danger" role="alert">
         <span th:text="${error}"></span>
+    </div>
+    <div th:if="${param.expirada}" class="alert alert-danger" role="alert">
+        Tu sesión se cerró porque cambiaron los datos de acceso de tu cuenta. Inicia sesión de nuevo.
     </div>
     <div th:if="${param.logout}" class="alert alert-success" role="alert">
         Sesión cerrada correctamente.

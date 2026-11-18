@@ -14,13 +14,13 @@
             <h2>Editar usuario</h2>
             <p class="page-lead" th:text="${u.email}">correo</p>
         </div>
-        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+        <p class="error" th:if="${error}" th:text="${error}">Error</p>
 
         <form th:action="@{'/admin/usuarios/' + ${u.id} + '/editar'}" method="post" class="auth-form form-pro">
             <fieldset class="form-section">
                 <div class="form-row">
-                    <div><label for="nombre">Nombre completo</label><input type="text" id="nombre" name="nombre" th:value="${u.nombre}" required></div>
-                    <div><label for="email">Correo</label><input type="email" id="email" name="email" th:value="${u.email}" required></div>
+                    <div><label for="nombre">Nombre completo</label><input type="text" id="nombre" name="nombre" th:value="${u.nombre}" maxlength="100" required></div>
+                    <div><label for="email">Correo</label><input type="email" id="email" name="email" th:value="${u.email}" maxlength="120" required></div>
                 </div>
                 <label for="password">Nueva contraseña (déjala vacía para no cambiarla)</label>
                 <input type="text" id="password" name="password" minlength="6" autocomplete="off">
@@ -30,11 +30,11 @@
                             <option th:each="r : ${roles}" th:value="${r.name()}" th:text="${r.etiqueta}" th:selected="${u.rol == r}"></option>
                         </select></div>
                     <div><label for="tarjetaProfesional">Tarjeta profesional</label>
-                        <input type="text" id="tarjetaProfesional" name="tarjetaProfesional" th:value="${u.tarjetaProfesional}"></div>
+                        <input type="text" id="tarjetaProfesional" name="tarjetaProfesional" th:value="${u.tarjetaProfesional}" maxlength="50"></div>
                 </div>
                 <div class="form-row">
                     <div><label for="tarifaBase">Tarifa base (COP)</label>
-                        <input type="number" id="tarifaBase" name="tarifaBase" min="0" step="1000"
+                        <input type="number" id="tarifaBase" name="tarifaBase" min="0" max="100000000" step="1000"
                                th:value="${u.tarifaBase != null ? u.tarifaBase.toBigInteger() : ''}"></div>
                 </div>
                 <div th:if="${u.rol.name() == 'CONTADOR_PRACTICANTE'}" class="estado-solo-lectura">

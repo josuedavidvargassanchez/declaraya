@@ -24,7 +24,7 @@
 
         <p class="success" th:if="${param.actualizada}">Estado actualizado.</p>
         <p class="success" th:if="${param.eliminada}">Solicitud eliminada.</p>
-        <p class="error" th:if="${param.error}" th:text="${param.error}">Error</p>
+        <p class="error" th:if="${error}" th:text="${error}">Error</p>
 
         <div class="tabla-wrap">
             <table class="tabla">

@@ -18,14 +18,20 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private IntentosLoginService intentosLoginService;
+
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
 
+        // tras 5 fallos seguidos la cuenta queda bloqueada 15 minutos (LockedException al iniciar sesion)
+        boolean bloqueado = intentosLoginService.estaBloqueado(usuario.getEmail());
         return new User(
                 usuario.getEmail(),
                 usuario.getPassword(),
+                true, true, true, !bloqueado,
                 List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name()))
         );
     }

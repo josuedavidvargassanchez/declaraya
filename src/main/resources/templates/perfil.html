@@ -19,10 +19,10 @@
         <p class="success" th:if="${param.datosActualizados}">Tus datos se guardaron correctamente.</p>
         <p class="error" th:if="${errorDatos}">No se guardaron los cambios: revisa los campos marcados.</p>
         <p class="success" th:if="${param.contrasenaActualizada}">Contraseña actualizada.</p>
-        <p class="error" th:if="${param.errorContrasena}" th:text="${param.errorContrasena}">Error</p>
+        <p class="error" th:if="${errorContrasena}" th:text="${errorContrasena}">Error</p>
         <p class="success" th:if="${param.verificacionEnviada}">Soporte enviado. Tu solicitud volvió a quedar pendiente de revisión.</p>
         <p class="success" th:if="${param.nuevaVerificacion}">Solicitud enviada. Tu cuenta quedó pendiente de verificación y el administrador fue notificado.</p>
-        <p class="error" th:if="${param.errorVerificacion}" th:text="${param.errorVerificacion}">Error</p>
+        <p class="error" th:if="${errorVerificacion}" th:text="${errorVerificacion}">Error</p>
 
         <!-- ================= Informacion personal: foto ================= -->
         <section class="detalle-bloque">

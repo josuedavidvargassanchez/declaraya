@@ -9,6 +9,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Convierte las excepciones de negocio en la pagina error.html,
@@ -38,6 +41,29 @@ public class WebExceptionHandler {
         log.error("Base de datos no disponible: {}", ex.getMessage());
         return paginaError(model, HttpStatus.SERVICE_UNAVAILABLE, "Servicio no disponible",
                 "No pudimos conectarnos con la base de datos. Intenta de nuevo en unos minutos.");
+    }
+
+    // 403/404 propios del codigo (por ejemplo "No tienes acceso a este archivo"): se muestra su motivo,
+    // que siempre es un texto escrito por nosotros, nunca un detalle tecnico
+    @ExceptionHandler(ResponseStatusException.class)
+    public String manejarResponseStatus(ResponseStatusException ex, Model model, HttpServletResponse response) {
+        HttpStatus estado = HttpStatus.resolve(ex.getStatusCode().value());
+        if (estado == null) {
+            estado = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
+        response.setStatus(estado.value());
+        return paginaError(model, estado, tituloDe(estado), ex.getReason());
+    }
+
+    static String tituloDe(HttpStatus estado) {
+        return switch (estado) {
+            case BAD_REQUEST -> "Solicitud no válida";
+            case FORBIDDEN -> "Acceso denegado";
+            case NOT_FOUND -> "Página no encontrada";
+            case SERVICE_UNAVAILABLE -> "Servicio no disponible";
+            case INTERNAL_SERVER_ERROR -> "Error interno";
+            default -> "Error";
+        };
     }
 
     private String paginaError(Model model, HttpStatus estado, String titulo, String detalle) {

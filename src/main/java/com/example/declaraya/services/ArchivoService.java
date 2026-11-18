@@ -47,6 +47,37 @@ public class ArchivoService {
         if (nombre == null || !EXTENSIONES.contains(extension(nombre))){
             throw new ArchivoNoPermitidoException("Solo se permiten archivos PDF, JPG, o PNG");
         }
+        validarContenido(archivo);
+    }
+
+    /**
+     * Punto unico para todas las cargas (chat, Mis documentos, verificacion, entregas y foto de perfil):
+     * los primeros bytes deben corresponder a la extension. Un .exe renombrado a .pdf se rechaza.
+     * PDF: "%PDF" · PNG: 89 50 4E 47 · JPG: FF D8 FF
+     */
+    public static void validarContenido(MultipartFile archivo) {
+        String nombre = archivo.getOriginalFilename();
+        String ext = nombre == null ? "" : extension(nombre);
+        byte[] firma = switch (ext) {
+            case "pdf" -> new byte[]{0x25, 0x50, 0x44, 0x46};
+            case "png" -> new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47};
+            case "jpg", "jpeg" -> new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+            default -> null;
+        };
+        if (firma == null) {
+            throw new ArchivoNoPermitidoException("Solo se permiten archivos PDF, JPG, o PNG");
+        }
+        byte[] inicio = new byte[firma.length];
+        int leidos;
+        try (InputStream in = archivo.getInputStream()) {
+            leidos = in.readNBytes(inicio, 0, inicio.length);
+        } catch (IOException e) {
+            throw new ArchivoNoPermitidoException("No se pudo leer el archivo. Intenta de nuevo.");
+        }
+        if (leidos < firma.length || !java.util.Arrays.equals(inicio, firma)) {
+            throw new ArchivoNoPermitidoException("El contenido del archivo no corresponde a un "
+                    + ("pdf".equals(ext) ? "PDF" : ext.toUpperCase()) + " válido. Sube el documento original.");
+        }
     }
 
     // el campo "url" de Archivo guarda el nombre con el que se almaceno en disco

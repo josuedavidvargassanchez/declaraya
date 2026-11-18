@@ -10,8 +10,15 @@
 <div class="auth-container error-box">
     <div class="error-ico"><span th:replace="~{fragments/icons :: i('alert')}"></span></div>
     <h1 th:text="${status}">404</h1>
-    <p class="subtitle" th:text="${error}">Not Found</p>
-    <p th:if="${message}" th:text="${message}"></p>
+    <!-- titulo en español segun el codigo; /error de Spring trae "error" en ingles y sin mensaje -->
+    <p class="subtitle" th:switch="${status}">
+        <span th:case="403">Acceso denegado</span>
+        <span th:case="404">Página no encontrada</span>
+        <span th:case="500">Error interno</span>
+        <span th:case="503">Servicio no disponible</span>
+        <span th:case="*" th:text="${error}">Error</span>
+    </p>
+    <p th:if="${message != null and !#strings.isEmpty(message)}" th:text="${message}"></p>
     <a th:href="@{/inicio}" class="btn">Volver al inicio</a>
 </div>
 </body>

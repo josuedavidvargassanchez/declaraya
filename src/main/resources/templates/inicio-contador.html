@@ -34,7 +34,10 @@
           Esa solicitud ya no esta abierta.
         </p>
         <p class="error" th:if="${param.errorValor}">
-          El valor propuesto debe ser mayor que cero.
+          El valor propuesto debe estar entre $1 y $100.000.000, con máximo 2 decimales.
+        </p>
+        <p class="error" th:if="${param.errorMensaje}">
+          El mensaje no puede superar 500 caracteres.
         </p>
         <p class="error" th:if="${param.errorDuplicada}">
           Ya enviaste una oferta para esa solicitud.
@@ -79,6 +82,7 @@
               <input
                 type="text"
                 name="mensaje"
+                maxlength="500"
                 placeholder="Mensaje para el cliente"
                 required
               />
@@ -86,6 +90,7 @@
                 type="number"
                 step="0.01"
                 min="1"
+                max="100000000"
                 name="valorPropuesto"
                 th:value="${usuario.tarifaBase}"
                 required

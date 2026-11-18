@@ -93,6 +93,7 @@
                   type="number"
                   id="presupuestoMaximo"
                   min="0"
+                  max="100000000"
                   step="1000"
                   th:field="*{presupuestoMaximo}"
                   placeholder="Ej: 300000"
@@ -145,6 +146,11 @@
               maxlength="1000"
               placeholder="Cuéntale al contador tu situación: fuentes de ingreso, documentos que tienes, dudas..."
             ></textarea>
+            <p
+              class="error"
+              th:if="${#fields.hasErrors('descripcion')}"
+              th:errors="*{descripcion}"
+            ></p>
           </fieldset>
 
           <button type="submit">Guardar solicitud</button>

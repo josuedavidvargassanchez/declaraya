@@ -50,6 +50,12 @@ public class FotoPerfilService {
         if (foto.getSize() > MAX_BYTES) {
             throw new FotoNoPermitidaException("La imagen no puede superar 2 MB");
         }
+        // misma revision de los primeros bytes que el resto de cargas
+        try {
+            ArchivoService.validarContenido(foto);
+        } catch (ArchivoService.ArchivoNoPermitidoException e) {
+            throw new FotoNoPermitidaException(e.getMessage());
+        }
         String guardada = UUID.randomUUID() + "." + ext;
         try (InputStream in = foto.getInputStream()){
             Files.copy(in, carpeta.resolve(guardada), StandardCopyOption.REPLACE_EXISTING);

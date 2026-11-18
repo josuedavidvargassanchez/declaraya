@@ -92,8 +92,8 @@ public class AcuerdoController {
 
     // atajo comodo desde la vista de la solicitud: ir directo al chat de una oferta aceptada
     @GetMapping("/ofertas/{ofertaId}/chat")
-    public String irAlChatDeOferta(@PathVariable Long ofertaId) {
-        Acuerdo acuerdo = acuerdoService.buscarPorOfertaId(ofertaId);
+    public String irAlChatDeOferta(@PathVariable Long ofertaId, Authentication authentication) {
+        Acuerdo acuerdo = acuerdoVisible(acuerdoService.buscarPorOfertaId(ofertaId).getId(), usuarioActual(authentication));
         return irAlChat(acuerdo.getId(), null);
     }
 

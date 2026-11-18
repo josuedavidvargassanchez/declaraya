@@ -1,8 +1,5 @@
 package com.example.declaraya.controllers;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.declaraya.exceptions.ReglaNegocioException;
 import com.example.declaraya.services.CalificacionService;
@@ -35,12 +33,15 @@ public class AdminCalificacionController {
     @PostMapping("/{id}/ocultar")
     public String ocultar(@PathVariable Long id,
                           @RequestParam(required = false) String motivo,
-                          @RequestParam(defaultValue = "false") boolean confirmado) {
+                          @RequestParam(defaultValue = "false") boolean confirmado,
+                          RedirectAttributes redirect) {
         try {
             calificacionService.ocultar(id, motivo, confirmado);
             return "redirect:/admin/calificaciones?ocultada";
         } catch (ReglaNegocioException e) {
-            return "redirect:/admin/calificaciones?error=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+            // el mensaje viaja como atributo flash (en la sesion), no en la URL
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/admin/calificaciones";
         }
     }
 }

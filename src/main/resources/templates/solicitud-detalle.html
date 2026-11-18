@@ -34,6 +34,7 @@
             <span class="chip chip-dinero" th:if="${solicitud.presupuestoMaximo != null}"
                   th:text="${'Presupuesto hasta $ ' + #numbers.formatDecimal(solicitud.presupuestoMaximo, 1, 'POINT', 0, 'COMMA')}">Presupuesto</span>
         </div>
+        <p class="error" th:if="${param.ofertaNoDisponible}">Esa oferta ya no se puede aceptar: la solicitud ya no está abierta o la oferta cambió de estado.</p>
 
         <div class="detalle-bloque" th:if="${!solicitud.situacionesLista.isEmpty()}">
             <p class="detalle-etiqueta">Situación del cliente</p>

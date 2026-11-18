@@ -242,6 +242,8 @@ public class SolicitudController {
     public String verSolicitud(@PathVariable Long id, Model model, Authentication authentication) {
         Usuario usuario = usuarioActual(authentication);
         SolicitudDeclaracion solicitud = solicitudService.buscarPorId(id);
+        // 403 si no es el dueño, el admin, un contador que puede ofertar (abierta), quien oferto, o el contador/mentor del acuerdo
+        solicitudService.exigirVisible(solicitud, usuario);
         boolean esDueno = solicitud.getPersona().getId().equals(usuario.getId());
 
         model.addAttribute("solicitud", solicitud);

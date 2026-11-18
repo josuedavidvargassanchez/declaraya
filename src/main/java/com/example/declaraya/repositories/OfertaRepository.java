@@ -12,4 +12,7 @@ public interface OfertaRepository extends JpaRepository<Oferta, Long> {
     List<Oferta> findBySolicitud(SolicitudDeclaracion solicitud);
 
     List<Oferta> findByContador(Usuario contador);
+
+    // cualquier estado: quien oferto (aunque lo rechazaran o retirara) puede seguir viendo la solicitud
+    boolean existsBySolicitudAndContador(SolicitudDeclaracion solicitud, Usuario contador);
 }
