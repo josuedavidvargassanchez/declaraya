@@ -3,6 +3,7 @@ package com.example.declaraya.config;
 import com.example.declaraya.services.NotificacionService;
 import com.example.declaraya.services.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -23,9 +24,14 @@ public class ModeloGlobal {
         if (authentication == null || !authentication.isAuthenticated()) {
             return;
         }
-        usuarioService.buscarPorEmail(authentication.getName()).ifPresent(u -> {
-            model.addAttribute("navRol", u.getRol().name());
-            model.addAttribute("notifCount", notificacionService.contarNoLeidas(u));
-        });
+        // tambien corre al mostrar /error: si la base no responde, la pagina sigue sin menu ni campana
+        try {
+            usuarioService.buscarPorEmail(authentication.getName()).ifPresent(u -> {
+                model.addAttribute("navRol", u.getRol().name());
+                model.addAttribute("notifCount", notificacionService.contarNoLeidas(u));
+            });
+        } catch (DataAccessException e) {
+            // sin navRol ni notifCount; WebExceptionHandler muestra el error si la pagina necesita la base
+        }
     }
 }
